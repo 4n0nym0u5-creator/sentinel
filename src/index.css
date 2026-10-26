@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html, body, #root { height: 100%; }
+body {
+  background:
+    radial-gradient(1200px 600px at 20% -10%, rgba(34,227,255,.07), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(255,45,85,.05), transparent 60%),
+    #03060b;
+  font-feature-settings: "tnum" 1, "cv11" 1;
+}
+.scan-bg { background-image: linear-gradient(rgba(34,227,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(34,227,255,.035) 1px, transparent 1px); background-size: 32px 32px; }
+.panel { @apply relative rounded-lg border border-ink-600/70 bg-ink-900/80 backdrop-blur-sm shadow-[0_0_0_1px_rgba(34,227,255,.03),0_10px_30px_-10px_rgba(0,0,0,.8)]; }
+.panel::before { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background: linear-gradient(180deg, rgba(34,227,255,.05), transparent 30%); }
+.panel-title { @apply flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[.14em] text-slate-400; }
+.chip { @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider; }
+.btn { @apply inline-flex items-center gap-1.5 rounded-md border border-ink-600 bg-ink-800/80 px-2.5 py-1.5 text-xs font-medium text-slate-300 transition hover:border-cyan-glow/50 hover:text-white; }
+.btn-on { @apply border-cyan-glow/60 bg-cyan-glow/10 text-cyan-glow; }
+.thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: #1c2d45; border-radius: 3px; }
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }
+.thin-scroll { scrollbar-width: thin; scrollbar-color: #1c2d45 transparent; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+.glow-text { text-shadow: 0 0 12px rgba(34,227,255,.55); }
+.crit-glow { text-shadow: 0 0 14px rgba(255,45,85,.7); }
+@keyframes ripple { 0% { r: 2; opacity: .9; } 100% { r: 26; opacity: 0; } }
+@keyframes sweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes blink { 50% { opacity: .25; } }
+.blink { animation: blink 1.2s steps(2, start) infinite; }
+.recharts-tooltip-wrapper { outline: none; }

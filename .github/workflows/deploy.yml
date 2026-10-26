@@ -1,0 +1,51 @@
+# Deploys SENTINEL to Cloudflare on every push to main (and on manual "Run workflow").
+# Needs repo secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (see README › Deploy from GitHub).
+# The Pages secret SITE_PASSCODE is set once with wrangler and is never handled by this workflow.
+name: Deploy to Cloudflare
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: cloudflare-deploy
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check secrets are configured
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Add the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID repository secrets (README › Deploy from GitHub)."; exit 1
+          fi
+      - run: npm ci
+      - name: Type-check and build
+        run: npx tsc -b && npm run build
+      - name: Refuse to deploy an ungated site
+        run: |
+          test -f functions/_middleware.ts || { echo "::error::functions/_middleware.ts (passcode gate) missing"; exit 1; }
+          grep -q SITE_PASSCODE functions/_middleware.ts || { echo "::error::gate does not use SITE_PASSCODE"; exit 1; }
+      - name: D1 schema (idempotent)
+        run: npx wrangler d1 execute sentinel-store --remote --file migrations/0001_init.sql -y
+      - name: Deploy Pages (production branch main, with functions/)
+        run: npx wrangler pages deploy dist --project-name sentinel-cyber-monitor --branch main --commit-hash "$GITHUB_SHA" --commit-message "${GITHUB_SHA::7}"
+      - name: Deploy collector Worker (cron)
+        working-directory: worker
+        run: npx wrangler deploy
+      - name: Verify gate (no cookie must give 401)
+        run: |
+          sleep 10
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://sentinel-cyber-monitor.pages.dev/)
+          echo "production / -> $code"; test "$code" = 401
+          code=$(curl -s -o /dev/null -w '%{http_code}' https://sentinel-cyber-monitor.pages.dev/api/collector)
+          echo "production /api/collector -> $code"; test "$code" = 401

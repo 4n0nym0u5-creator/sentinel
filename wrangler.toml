@@ -1,0 +1,10 @@
+# Cloudflare Pages project config (static build in dist/, Functions in functions/).
+name = "sentinel-cyber-monitor"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sentinel-store"
+database_id = "a82cc985-6132-41ec-8630-26c581718b2e"

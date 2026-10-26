@@ -1,0 +1,18 @@
+# SENTINEL collector (Cron Worker). Deploy: npx wrangler deploy -c worker/wrangler.toml
+name = "sentinel-collector"
+main = "index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+preview_urls = false
+
+[triggers]
+crons = ["* * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "sentinel-store"
+database_id = "a82cc985-6132-41ec-8630-26c581718b2e"
+
+[observability]
+enabled = true

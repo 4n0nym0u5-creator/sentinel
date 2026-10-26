@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+*.tsbuildinfo
+*passcode*
+*.zip
+.wrangler-local/
+*.log
+tail.jsonl
+tail.err
+screenshots/
+.env
+.env.*
