@@ -280,21 +280,25 @@ export function analyse(id: StreamId, H: Hist, F: Filters, range: RangeId, granI
 export const fmtN = (n: number) => (Math.abs(n) >= 1e9 ? (n / 1e9).toFixed(2) + 'B' : Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : Math.abs(n) >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : Number.isInteger(n) ? n.toLocaleString('en') : n.toFixed(1));
 
 /* ------------------------------------------------------------------ top movers */
-export interface Mover { dim: string; key: string; label: string; cur: number; prev: number; delta: number; pct: number | null; p: number }
+/** isNew: never seen in the history before the current window (a newly tracked group/sector/etc., not growth from an existing base).
+ *  returned: absent in the prior window but seen earlier. first: first day (epoch-day) the key appears in the history. */
+export interface Mover { dim: string; key: string; label: string; cur: number; prev: number; delta: number; pct: number | null; p: number; first: number; isNew: boolean; returned: boolean }
 export function movers(H: Hist, F: Filters, P: number): { dims: Record<string, Mover[]>; window: string; notes: string[] } {
   const t = today(); const dims: Record<string, Mover[]> = {}; const notes: string[] = [];
   const run = (dim: string, src: string, lag: number, keyOf: (D: any, i: number) => string | null, labelOf: (k: string) => string, covered?: (a: number, b: number) => boolean) => {
     const h = H[src]; if (!h?.ok) return;
     const D = h.data, last = t - lag, a = last - P + 1, b = last - 2 * P + 1;
     if (covered && !covered(b, last)) { notes.push(`${dim}: NVD backfill has not yet covered both periods`); return; }
-    const cur = new Map<string, number>(), prev = new Map<string, number>();
+    const cur = new Map<string, number>(), prev = new Map<string, number>(), first = new Map<string, number>();
     for (let i = 0; i < D.d.length; i++) {
-      const d = D.d[i]; if (d < b || d > last) continue;
+      const d = D.d[i]; if (d > last) continue;
       const k = keyOf(D, i); if (k == null) continue;
+      const f = first.get(k); if (f == null || d < f) first.set(k, d);
+      if (d < b) continue;
       const m = d >= a ? cur : prev; m.set(k, (m.get(k) || 0) + 1);
     }
     const keys = new Set([...cur.keys(), ...prev.keys()]);
-    dims[dim] = [...keys].map((k) => { const c = cur.get(k) || 0, p = prev.get(k) || 0; return { dim, key: k, label: labelOf(k), cur: c, prev: p, delta: c - p, pct: p ? ((c - p) / p) * 100 : null, p: poissonTest(c, p).p }; })
+    dims[dim] = [...keys].map((k) => { const c = cur.get(k) || 0, p = prev.get(k) || 0; const f = first.get(k) ?? a; return { dim, key: k, label: labelOf(k), cur: c, prev: p, delta: c - p, pct: p ? ((c - p) / p) * 100 : null, p: poissonTest(c, p).p, first: f, isNew: f >= a, returned: p === 0 && f < b }; })
       .filter((m) => m.key && m.key !== 'Unknown' && m.key !== '' && m.cur + m.prev >= 3);
   };
   const rw = H.ransomware?.data;

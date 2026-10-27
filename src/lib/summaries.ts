@@ -66,7 +66,7 @@ export function liveSummary(feeds: Record<string, FeedState>, threat: Threat, no
   const f = liveFacts(feeds, now);
   const out: string[] = [];
   const drivers = threat.signals.filter((s) => s.score != null && s.score > 0).sort((a, b) => b.weight * (b.score as number) - a.weight * (a.score as number)).slice(0, 2).map((s) => (/^[A-Z][a-z]/.test(s.label) ? s.label[0].toLowerCase() + s.label.slice(1) : s.label));
-  out.push(`SENTINEL's overall THREATCON reads ${threat.name} (${threat.score}/100)${drivers.length ? `, driven mainly by ${list(drivers)}` : ''}.${threat.level <= 2 ? ' That is a busy picture by this dashboard\'s own scale.' : threat.level >= 4 ? ' That is a normal-to-quiet day by this dashboard\'s own scale.' : ''}`);
+  out.push(`SENTINEL's overall THREATCON reads ${threat.name} (level ${threat.level} of 5, score ${threat.score}/100)${drivers.length ? `, driven mainly by ${list(drivers)}` : ''}.${threat.level >= 4 ? ' That is a busy picture by this dashboard\'s own scale.' : threat.level <= 2 ? ' That is a normal-to-quiet day by this dashboard\'s own scale.' : ''}`);
   if (f.ok.rw) {
     const d = pctS(f.r7, f.p7);
     out.push(`Ransomware gangs posted ${n0(f.r7)} victim claims on their leak sites in the last 7 days${d == null ? '' : `, ${updown(d)} on the week before — ${sigS(f.rwP)}`}${f.topGroup ? `; ${f.topGroup[0]} is the most active group (${Math.round((f.topGroup[1] / Math.max(f.r7, 1)) * 100)}% of claims)` : ''}.${f.topSector ? ` Over 30 days the most-named sectors are ${list(f.sectors3)}${f.ciShare != null ? `, and ${Math.round(f.ciShare * 100)}% of victims with a known sector are critical-infrastructure-type` : ''}.` : ''} These are unverified claims, posted days to weeks after the break-in.`);
@@ -122,7 +122,10 @@ function describe(a: Analysis, label = a.meta.label) {
   if (c) s += `; the latest ${a.period} days are ${updown(Math.round(c.cmp.pct!))} on ${c.what}${c.cmp.p != null ? ` — ${sigS(c.cmp.p)}` : ''}`;
   return s + '.';
 }
-const sigMover = (xs: Mover[] | undefined, dir: 1 | -1) => (xs ?? []).filter((m) => !/^(Unknown|Other|Not Found|N\/A|\?\?)$/i.test(m.key) && m.p < 0.05 && Math.sign(m.delta) === dir && m.cur + m.prev >= 5).sort((a, b) => dir * (b.delta - a.delta))[0];
+const PLACEHOLDER = /^(Unknown|Other|Not Found|N\/A|\?\?)$/i;
+const dayS = (d: number) => new Date(d * DAY).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+/** Rising from a base of zero is not "growth": newly tracked or returning keys are reported separately. */
+const sigMover = (xs: Mover[] | undefined, dir: 1 | -1) => (xs ?? []).filter((m) => !PLACEHOLDER.test(m.key) && !m.isNew && !m.returned && m.p < 0.05 && Math.sign(m.delta) === dir && m.cur + m.prev >= 5).sort((a, b) => dir * (b.delta - a.delta))[0];
 const mLabel = (m: Mover) => (m.dim.startsWith('Countries') ? cname(m.key) : m.label);
 
 export function trendsSummary(all: Record<string, Analysis>, mv: { dims: Record<string, Mover[]>; window: string }, range: RangeId, filtered: boolean): Summary {
@@ -134,7 +137,9 @@ export function trendsSummary(all: Record<string, Analysis>, mv: { dims: Record<
   const sec = sigMover(mv.dims['Sectors (ransomware)'], 1), cty = sigMover(mv.dims['Countries (ransomware)'], 1), grp = sigMover(mv.dims['Ransomware groups'], 1);
   const mp: string[] = [];
   if (sec) mp.push(`${sec.label} is the fastest significantly-growing sector (${n0(sec.prev)} → ${n0(sec.cur)} claims)`);
-  if (grp) mp.push(`${grp.label} is the fastest-growing group (${n0(grp.prev)} → ${n0(grp.cur)})`);
+  if (grp) mp.push(`${grp.label} is the fastest-growing established group (${n0(grp.prev)} → ${n0(grp.cur)})`);
+  const fresh = (mv.dims['Ransomware groups'] ?? []).filter((m) => m.isNew && !PLACEHOLDER.test(m.key) && m.cur >= 5).sort((a, b) => b.cur - a.cur);
+  if (fresh.length) mp.push(`${fresh[0].label} is a newly tracked group (first seen ${dayS(fresh[0].first)}, ${n0(fresh[0].cur)} claims since — a new leak site, not growth from an existing base)${fresh.length > 1 ? `, one of ${fresh.length} groups first seen in this window` : ''}`);
   if (cty) mp.push(`${mLabel(cty)} the fastest-growing victim country (${n0(cty.prev)} → ${n0(cty.cur)})`);
   now.push(mp.length ? `Comparing ${mv.window}: ${list(mp)}.` : `No sector, group or country shows a statistically significant rise between the two windows (${mv.window}).`);
   now.push(`${describe(kev, 'Known-exploited flaw (KEV) additions')} ${describe(nvd, 'Serious new CVEs (critical + high)')} The latest weeks of the NVD series are understated by its analysis backlog.`);
@@ -159,11 +164,11 @@ export function trendsSummary(all: Record<string, Analysis>, mv: { dims: Record<
 }
 
 export function trendsMeans(A: Analysis, mv: { dims: Record<string, Mover[]>; window: string }) {
-  const risers = Object.values(mv.dims).flatMap((xs) => xs.filter((m) => !/^(Unknown|Other|Not Found|N\/A|\?\?)$/i.test(m.key) && m.p < 0.05 && m.delta > 0 && m.cur + m.prev >= 5)).sort((a, b) => b.delta - a.delta).slice(0, 3);
+  const risers = Object.values(mv.dims).flatMap((xs) => xs.filter((m) => !PLACEHOLDER.test(m.key) && m.p < 0.05 && m.delta > 0 && m.cur + m.prev >= 5)).sort((a, b) => b.delta - a.delta).slice(0, 3);
   return {
     main: `${describe(A)} Focus on the trend line and smoothed averages rather than individual bars; hatched bars are incomplete and do not count.`,
     sev: A.daily.sevLevels > 0 ? `The serious share is ${A.sevMk ? VERB[A.sevVerdict] : 'not yet testable'}. A growing red/orange band means things are getting worse in severity even if counts are flat.` : 'This series has no severity levels; switch to ransomware, KEV, NVD or combined to see a mix.',
-    movers: risers.length ? `Statistically significant risers: ${list(risers.map((m) => `${mLabel(m)} (${n0(m.prev)} → ${n0(m.cur)})`))}. Small counts swing a lot — only solid bars should change your view.` : 'Nothing has risen by more than chance would explain between the two windows; the faint bars are noise.',
+    movers: risers.length ? `Statistically significant risers: ${list(risers.map((m) => m.isNew ? `${mLabel(m)} (newly tracked, first seen ${dayS(m.first)}; ${n0(m.cur)} so far)` : `${mLabel(m)} (${n0(m.prev)} → ${n0(m.cur)}${m.returned ? ', back after a quiet spell' : ''})`))}. Small counts swing a lot — only solid bars should change your view.` : 'Nothing has risen by more than chance would explain between the two windows; the faint bars are noise.',
   };
 }
 

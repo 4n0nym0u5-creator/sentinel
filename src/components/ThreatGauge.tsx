@@ -1,6 +1,6 @@
 import { at, Term } from './explain';
 import { useState } from 'react';
-import type { Threat } from '../lib/model';
+import { THREAT_COLORS, THREAT_NAMES, type Threat } from '../lib/model';
 import { Info } from 'lucide-react';
 
 export default function ThreatGauge({ t, compact }: { t: Threat; compact?: boolean }) {
@@ -11,7 +11,7 @@ export default function ThreatGauge({ t, compact }: { t: Threat; compact?: boole
     <div className="relative flex items-center gap-3" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <svg width={compact ? 92 : 120} height={compact ? 56 : 72} viewBox="0 0 120 72">
         <defs>
-          <linearGradient id="gg" x1="0" x2="1"><stop offset="0" stopColor="#22c55e" /><stop offset=".35" stopColor="#3aa0ff" /><stop offset=".55" stopColor="#ffc21a" /><stop offset=".75" stopColor="#ff7a1a" /><stop offset="1" stopColor="#ff2d55" /></linearGradient>
+          <linearGradient id="gg" x1="0" x2="1"><stop offset=".1" stopColor="#22c55e" /><stop offset=".3" stopColor="#3aa0ff" /><stop offset=".5" stopColor="#ffc21a" /><stop offset=".7" stopColor="#ff7a1a" /><stop offset=".9" stopColor="#ff2d55" /></linearGradient>
         </defs>
         <path d="M14 64 A46 46 0 0 1 106 64" fill="none" stroke="#132033" strokeWidth={10} strokeLinecap="round" />
         <path d="M14 64 A46 46 0 0 1 106 64" fill="none" stroke="url(#gg)" strokeWidth={10} strokeLinecap="round" strokeDasharray={`${C * frac} ${C}`} style={{ transition: 'stroke-dasharray 1s ease', filter: `drop-shadow(0 0 6px ${t.color})` }} />
@@ -24,13 +24,13 @@ export default function ThreatGauge({ t, compact }: { t: Threat; compact?: boole
       </svg>
       <div className="leading-tight">
         <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[.18em] text-slate-400">Global <Term id="threatcon">THREATCON</Term> <Info size={11} className="text-slate-500" /></div>
-        <div className="text-xl font-bold tracking-wide" style={{ color: t.color, textShadow: `0 0 14px ${t.color}99` }}>{t.level} · {t.name}</div>
-        <div className="flex gap-0.5 pt-1">{[5, 4, 3, 2, 1].map((l) => <span key={l} className="h-1.5 w-5 rounded-sm" style={{ background: l >= t.level ? ['', '#ff2d55', '#ff7a1a', '#ffc21a', '#3aa0ff', '#22c55e'][l] : '#132033' }} />)}</div>
+        <div className="text-xl font-bold tracking-wide" style={{ color: t.color, textShadow: `0 0 14px ${t.color}99` }}>{t.name} <span className="text-sm font-semibold opacity-80">· {t.level}/5</span></div>
+        <div className="flex gap-0.5 pt-1">{([1, 2, 3, 4, 5] as const).map((l) => <span key={l} title={`${l} ${THREAT_NAMES[l]}`} className="h-1.5 w-5 rounded-sm" style={{ background: l <= t.level ? THREAT_COLORS[l] : '#132033' }} />)}</div>
       </div>
       {open && (
         <div className="absolute left-0 top-full z-50 mt-2 w-[440px] rounded-lg border border-ink-500 bg-ink-900/98 p-3 text-xs shadow-2xl backdrop-blur">
           <div className="mb-2 font-semibold text-white">How the threat level is computed</div>
-          <p className="mb-2 text-slate-400">Weighted average of live signals (0–1 each) × 100. Offline feeds are excluded and the remaining weights re-normalised. Bands: ≥80 SEVERE · ≥60 HIGH · ≥40 ELEVATED · ≥20 GUARDED · else LOW.</p>
+          <p className="mb-2 text-slate-400">Weighted average of live signals (0–1 each) × 100. Offline feeds are excluded and the remaining weights re-normalised. Levels (a higher number is worse): 1 LOW (&lt;20) · 2 GUARDED (≥20) · 3 ELEVATED (≥40) · 4 HIGH (≥60) · 5 SEVERE (≥80).</p>
           <table className="w-full">
             <tbody>
               {t.signals.map((s) => (

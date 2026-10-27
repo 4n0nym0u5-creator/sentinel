@@ -8,7 +8,7 @@ Stack: Vite + React 18 + TypeScript + Tailwind. The map uses d3-geo (Natural Ear
 
 ## Features
 - **World map:** countries are heat-shaded by activity, with live markers per country. New items show as ripples and a critical item shows a red pulse. You can zoom and pan, switch layers on and off (heat, markers, ripples, labels), and click a country to open a drill-down: ransomware groups, sectors hit, attack sources, C2 servers, news and every event.
-- **Global THREATCON gauge (1–5):** a transparent heuristic. Hover the ⓘ to see every input signal, its weight and its current value. If a feed is offline, its signal is dropped and the remaining weights are renormalised.
+- **Global THREATCON gauge (1 LOW → 5 SEVERE):** a transparent heuristic. Hover the ⓘ to see every input signal, its weight and its current value. If a feed is offline, its signal is dropped and the remaining weights are renormalised.
 - **KPI tiles:** critical events, ransomware victims (with the change against the prior window), KEV additions, critical CVEs, Feodo C2 online, top attacked port, and the ISC Infocon level. Click a tile to filter.
 - **Live incident stream:** severity-coloured. New items flash, and there is a "High+ only" toggle.
 - **Ransomware panel:** a 30-day trend plus breakdowns by group, sector and country, and the latest claims.
@@ -243,7 +243,7 @@ It is a weighted 0–100 score. Each signal is normalised to 0–1, and a signal
 | SANS ISC Infocon | 15 |
 | Feodo C2 servers online (20 = max) | 10 |
 
-Bands: ≥80 → 1 SEVERE, ≥60 → 2 HIGH, ≥40 → 3 ELEVATED, ≥20 → 4 GUARDED, otherwise 5 LOW. It is a situational-awareness heuristic, **not** an official alert level.
+Levels (a higher number is always worse): ≥80 → 5 SEVERE, ≥60 → 4 HIGH, ≥40 → 3 ELEVATED, ≥20 → 2 GUARDED, otherwise 1 LOW. It is a situational-awareness heuristic, **not** an official alert level.
 
 ## Caveats
 - Ransomware entries are *claims* on leak sites, not verified breaches. Victim country is as reported by ransomware.live.

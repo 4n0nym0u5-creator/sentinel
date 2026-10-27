@@ -33,7 +33,7 @@ export default function Movers({ m, onPick }: { m: { dims: Record<string, Mover[
                 <td className="mono whitespace-nowrap pr-2 text-right text-slate-500">{r.prev} → <span className="text-slate-200">{r.cur}</span></td>
                 <td className="w-[34%] pr-2"><div className="h-1.5 rounded bg-ink-700"><div className="h-full rounded" style={{ width: `${(Math.abs(r.delta) / max) * 100}%`, background: up ? '#ff2d55' : '#22c55e', opacity: sig ? 1 : 0.35 }} /></div></td>
                 <td className="mono w-14 text-right" style={{ color: up ? '#ff5d7a' : '#4ade80' }}>{r.delta > 0 ? '+' : ''}{r.delta}</td>
-                <td className="mono w-16 text-right text-slate-400">{r.pct == null ? 'new' : fmtPct(r.pct)}</td>
+                <td className="mono w-16 text-right text-slate-400">{r.isNew ? <span className="chip border border-amber-400/40 text-amber-300" title={`Newly tracked: first seen ${new Date(r.first * 86400000).toISOString().slice(0, 10)}`}>new</span> : r.returned ? <span title="None in the prior window, but seen earlier">returned</span> : r.pct == null ? '—' : fmtPct(r.pct)}</td>
                 <td className="w-24 pl-2 text-right">{sig ? <span className="chip border border-cyan-glow/40 text-cyan-glow" title={fmtP(r.p)}>significant</span> : <span className="text-[10px] text-slate-600" title={fmtP(r.p)}>noise ({r.p < 0.001 ? '<.001' : r.p.toFixed(2)})</span>}</td>
               </tr>
             );

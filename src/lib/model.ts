@@ -85,6 +85,9 @@ export function buildEvents(feeds: Record<string, FeedState>): Ev[] {
 }
 
 export interface Signal { key: string; label: string; value: string; score: number | null; weight: number; detail: string }
+/** THREATCON scale shared by the gauge, header, tooltip, glossary and summaries: 1 LOW → 5 SEVERE. */
+export const THREAT_NAMES = { 1: 'LOW', 2: 'GUARDED', 3: 'ELEVATED', 4: 'HIGH', 5: 'SEVERE' } as const;
+export const THREAT_COLORS = { 1: '#22c55e', 2: '#3aa0ff', 3: '#ffc21a', 4: '#ff7a1a', 5: '#ff2d55' } as const;
 export interface Threat { score: number; level: 1 | 2 | 3 | 4 | 5; name: string; color: string; signals: Signal[] }
 const clamp = (x: number) => Math.max(0, Math.min(1, x));
 
@@ -128,8 +131,9 @@ export function computeThreat(feeds: Record<string, FeedState>, events: Ev[]): T
   const live = s.filter((x) => x.score != null);
   const W = live.reduce((a, x) => a + x.weight, 0) || 1;
   const score = Math.round((live.reduce((a, x) => a + x.weight * (x.score as number), 0) / W) * 100);
-  const level = (score >= 80 ? 1 : score >= 60 ? 2 : score >= 40 ? 3 : score >= 20 ? 4 : 5) as Threat['level'];
-  const names = { 1: 'SEVERE', 2: 'HIGH', 3: 'ELEVATED', 4: 'GUARDED', 5: 'LOW' } as const;
-  const colors = { 1: '#ff2d55', 2: '#ff7a1a', 3: '#ffc21a', 4: '#3aa0ff', 5: '#22c55e' } as const;
+  // One scale everywhere: 1 = LOW … 5 = SEVERE (a higher number is always worse).
+  const level = (score >= 80 ? 5 : score >= 60 ? 4 : score >= 40 ? 3 : score >= 20 ? 2 : 1) as Threat['level'];
+  const names = THREAT_NAMES;
+  const colors = THREAT_COLORS;
   return { score, level, name: names[level], color: colors[level], signals: s };
 }
