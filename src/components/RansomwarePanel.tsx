@@ -1,3 +1,5 @@
+import { at } from './explain';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { Area, AreaChart, Bar as RBar, BarChart, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -11,7 +13,7 @@ const PAL = ['#ff2d55', '#ff7a1a', '#ffc21a', '#22e3ff', '#3aa0ff', '#a78bfa', '
 const top = (m: Map<string, number>, n: number) => [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, n);
 const TT = { contentStyle: { background: '#09101b', border: '1px solid #2a4062', borderRadius: 6, fontSize: 11 }, itemStyle: { color: '#e2e8f0' }, labelStyle: { color: '#94a3b8' } };
 
-export default function RansomwarePanel({ feed, events, onCountry, onPick, onGroup }: { feed: FeedState; events: Ev[]; onCountry: (cc: string) => void; onPick: (e: Ev) => void; onGroup: (g: string) => void }) {
+export default function RansomwarePanel({ feed, events, onCountry, onPick, onGroup, means }: { feed: FeedState; events: Ev[]; onCountry: (cc: string) => void; onPick: (e: Ev) => void; onGroup: (g: string) => void; means?: ReactNode }) {
   const [tab, setTab] = useState<'groups' | 'sectors' | 'countries' | 'latest'>('groups');
   const rw = useMemo(() => events.filter((e) => e.type === 'ransomware'), [events]);
   const all = (feed.data?.items || []) as any[];
@@ -25,9 +27,9 @@ export default function RansomwarePanel({ feed, events, onCountry, onPick, onGro
     for (const e of rw) { const v = e.raw; g.set(v.group, (g.get(v.group) || 0) + 1); s.set(v.sector, (s.get(v.sector) || 0) + 1); if (v.country) c.set(v.country, (c.get(v.country) || 0) + 1); }
     return { groups: top(g, 12), sectors: top(s, 10), countries: top(c, 14) };
   }, [rw]);
-  if (!feed.data) return <Panel title="Ransomware leak-site activity" icon={<Skull size={13} className="text-sev-high" />} feeds={[feed]}><Offline f={feed} what="ransomware.live" /></Panel>;
+  if (!feed.data) return <Panel info="ransomware" title="Ransomware leak-site activity" icon={<Skull size={13} className="text-sev-high" />} feeds={[feed]}><Offline f={feed} what="ransomware.live" /></Panel>;
   return (
-    <Panel title={<>Ransomware leak-site activity <span className="mono text-sev-high">{rw.length}</span></>} icon={<Skull size={13} className="text-sev-high" />} feeds={[feed]} bodyClass="flex flex-col">
+    <Panel info="ransomware" means={means} title={<>{at('Ransomware leak-site activity')} <span className="mono text-sev-high">{rw.length}</span></>} icon={<Skull size={13} className="text-sev-high" />} feeds={[feed]} bodyClass="flex flex-col">
       <div className="h-[84px] px-1 pt-1">
         <ResponsiveContainer>
           <AreaChart data={daily} margin={{ top: 6, right: 8, left: -22, bottom: 0 }}>

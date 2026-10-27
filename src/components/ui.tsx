@@ -3,15 +3,18 @@ import type { ReactNode } from 'react';
 import type { FeedState, Sev } from '../lib/types';
 import { SEV_COLOR, cvssSev } from '../lib/sev';
 import { ago } from '../lib/format';
+import { InfoTip, ExplainCaption, Means, at } from './explain';
 
-export function Panel({ title, icon, right, children, className, bodyClass, feeds }: { title: ReactNode; icon?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; feeds?: FeedState[] }) {
+export function Panel({ title, icon, right, children, className, bodyClass, feeds, info, means }: { title: ReactNode; icon?: ReactNode; right?: ReactNode; children: ReactNode; className?: string; bodyClass?: string; feeds?: FeedState[]; info?: string; means?: ReactNode }) {
   return (
     <section className={clsx('panel flex h-full min-h-0 flex-col', className)}>
       <header className="flex items-center justify-between gap-2 border-b border-ink-600/60 px-3 py-2">
-        <h2 className="panel-title">{icon}{title}</h2>
+        <h2 className="panel-title">{icon}{at(title)}{info && <InfoTip panel={info} title={typeof title === 'string' ? title : undefined} />}</h2>
         <div className="flex items-center gap-2">{right}{feeds?.map((f) => <FeedDot key={f.id} f={f} />)}</div>
       </header>
+      {info && <ExplainCaption panel={info} />}
       <div className={clsx('min-h-0 flex-1', bodyClass)}>{children}</div>
+      {means && info && <Means id={info}>{means}</Means>}
     </section>
   );
 }

@@ -1,3 +1,4 @@
+import { at, Term } from './explain';
 import { useState } from 'react';
 import type { Threat } from '../lib/model';
 import { Info } from 'lucide-react';
@@ -22,7 +23,7 @@ export default function ThreatGauge({ t, compact }: { t: Threat; compact?: boole
         <text x={60} y={52} textAnchor="middle" fontSize={15} fontWeight={700} fill="#fff" className="mono">{t.score}</text>
       </svg>
       <div className="leading-tight">
-        <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[.18em] text-slate-400">Global THREATCON <Info size={11} className="text-slate-500" /></div>
+        <div className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[.18em] text-slate-400">Global <Term id="threatcon">THREATCON</Term> <Info size={11} className="text-slate-500" /></div>
         <div className="text-xl font-bold tracking-wide" style={{ color: t.color, textShadow: `0 0 14px ${t.color}99` }}>{t.level} · {t.name}</div>
         <div className="flex gap-0.5 pt-1">{[5, 4, 3, 2, 1].map((l) => <span key={l} className="h-1.5 w-5 rounded-sm" style={{ background: l >= t.level ? ['', '#ff2d55', '#ff7a1a', '#ffc21a', '#3aa0ff', '#22c55e'][l] : '#132033' }} />)}</div>
       </div>
@@ -34,7 +35,7 @@ export default function ThreatGauge({ t, compact }: { t: Threat; compact?: boole
             <tbody>
               {t.signals.map((s) => (
                 <tr key={s.key} className="border-t border-ink-700 align-top">
-                  <td className="py-1 pr-2 text-slate-300">{s.label}<div className="text-[10px] text-slate-500">{s.value}</div><div className="mono text-[9px] text-slate-600">{s.detail}</div></td>
+                  <td className="py-1 pr-2 text-slate-300">{at(s.label)}<div className="text-[10px] text-slate-500">{s.value}</div><div className="mono text-[9px] text-slate-600">{s.detail}</div></td>
                   <td className="mono py-1 pr-2 text-right text-slate-500">w{s.weight}</td>
                   <td className="mono py-1 text-right font-semibold" style={{ color: s.score == null ? '#ff2d55' : '#e2e8f0' }}>{s.score == null ? 'OFF' : s.score.toFixed(2)}</td>
                 </tr>

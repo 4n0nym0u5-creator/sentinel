@@ -22,6 +22,8 @@ import InfraPanel from './components/InfraPanel';
 import NewsPanel from './components/NewsPanel';
 import { DetailDrawer, CountryDrawer, FeedHealth } from './components/Drawers';
 import { Panel, STATUS_COLOR } from './components/ui';
+import { ExplainControls, ExecSummary, at } from './components/explain';
+import { liveSummary, liveMeans } from './lib/summaries';
 import { TYPE_META } from './components/icons';
 
 const WINDOWS = { '1h': 3600e3, '6h': 6 * 3600e3, '24h': 86400e3, '7d': 7 * 86400e3, '30d': 30 * 86400e3 } as const;
@@ -94,6 +96,9 @@ export default function App() {
   }, [all, win, types, minSev, region, q]);
   const agg = useMemo(() => aggregate(events), [events]);
   const threat = useMemo(() => computeThreat(feeds, all), [feeds, all]);
+  const nowMin = Math.floor(Date.now() / 60e3);
+  const ls = useMemo(() => liveSummary(feeds, threat), [feeds, threat, nowMin]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lm = useMemo(() => liveMeans(feeds), [feeds, nowMin]); // eslint-disable-line react-hooks/exhaustive-deps
   const feedList = Object.values(feeds);
   const live = feedList.filter((f) => f.status === 'live').length;
 
@@ -156,6 +161,7 @@ export default function App() {
             <span className="flex gap-0.5">{feedList.map((f) => <span key={f.id} className={clsx('h-2 w-1.5 rounded-sm', f.status === 'loading' && 'blink')} style={{ background: STATUS_COLOR[f.status] }} />)}</span>
           </button>
           {collector.available && <button className="btn" onClick={() => setHealth(true)} title={`Server collector (Cloudflare cron, every minute) last ran ${collector.lastRun ? new Date(collector.lastRun).toLocaleString() : 'never'}${collector.failing ? ` · ${collector.failing} source task(s) failing` : ''}`}><span className="h-2 w-2 rounded-full" style={{ background: collColor, boxShadow: `0 0 6px ${collColor}` }} /><span className="mono text-[10.5px]">collected {collector.lastRun ? ago(collector.lastRun, now) : 'never'}</span></button>}
+          <ExplainControls />
           <button className="btn" onClick={doRefresh} title={collector.available ? 'Re-read the latest collected data now. Upstream sources are re-fetched by the server collector on its schedule (15 min – 6 h per source).' : 'Force refresh all feeds'}><RefreshCw size={14} className={clsx(refreshing && 'animate-spin')} /></button>
           <button className={clsx('btn', sound && 'btn-on')} onClick={() => { setSound((s) => !s); if (!sound) alertTone(); }} title="Audible alert for new critical items (off by default)">{sound ? <Volume2 size={14} /> : <VolumeX size={14} />}</button>
           {!/^(localhost|127\.|\[::1\])/.test(location.hostname) && <a className="btn" href="/__logout" title="Sign out of SENTINEL (clears the 7-day session cookie)"><Power size={14} /></a>}
@@ -189,11 +195,12 @@ export default function App() {
         {filtersActive && <button className="btn !py-1 text-[11px]" onClick={resetFilters}>Reset</button>}
       </div>
 
+      <ExecSummary id="live" title="Live — executive summary" s={ls} accent="#22e3ff" />
       <Kpis feeds={feeds} events={events} windowMs={WINDOWS[win]} onType={focusType} />
 
       {/* ---------- map + stream ---------- */}
       <div className="grid min-h-0 grid-cols-1 gap-2 xl:grid-cols-12">
-        <Panel className="xl:col-span-8 2xl:col-span-9" title={<>Global threat map {region !== 'All' && <span className="text-cyan-glow">· {region}</span>}</>} icon={<Globe2 size={13} className="text-cyan-glow" />}
+        <Panel info="map" means={lm.map} className="xl:col-span-8 2xl:col-span-9" title={<>{at('Global threat map')} {region !== 'All' && <span className="text-cyan-glow">· {region}</span>}</>} icon={<Globe2 size={13} className="text-cyan-glow" />}
           right={<span className="text-[10px] text-slate-500">scroll to zoom · drag to pan · click a country</span>}>
           <WorldMap events={events} agg={agg} fresh={freshSet} selected={country} onSelect={setCountry} height="min(58vh, 640px)" />
         </Panel>
@@ -204,10 +211,10 @@ export default function App() {
 
       {/* ---------- analysis panels ---------- */}
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2 2xl:grid-cols-4">
-        <div className="h-[400px]"><RansomwarePanel feed={feeds.ransomware} events={events} onCountry={setCountry} onPick={setSel} onGroup={(g) => setQ(g)} /></div>
-        <div className="h-[400px]"><VulnPanel feeds={feeds} events={events} onPick={setSel} now={now} /></div>
-        <div className="h-[400px]"><InfraPanel feeds={feeds} events={events} onPick={setSel} onCountry={setCountry} /></div>
-        <div className="h-[400px]"><NewsPanel feed={feeds.news} events={events} onPick={setSel} now={now} /></div>
+        <div className="h-[400px]"><RansomwarePanel means={lm.ransomware} feed={feeds.ransomware} events={events} onCountry={setCountry} onPick={setSel} onGroup={(g) => setQ(g)} /></div>
+        <div className="h-[400px]"><VulnPanel means={lm.vulns} feeds={feeds} events={events} onPick={setSel} now={now} /></div>
+        <div className="h-[400px]"><InfraPanel means={lm.infra} feeds={feeds} events={events} onPick={setSel} onCountry={setCountry} /></div>
+        <div className="h-[400px]"><NewsPanel means={lm.news} feed={feeds.news} events={events} onPick={setSel} now={now} /></div>
       </div>
 
       <Marquee events={events} onPick={setSel} />

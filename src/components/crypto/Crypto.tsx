@@ -9,6 +9,8 @@ import { ago } from '../../lib/format';
 import { analyse, CRYPTO_STREAMS, RANGES, type Gran, type RangeId, type StreamId, NO_FILTERS, fmtPct } from '../../lib/trends';
 import { poissonTest, fmtP } from '../../lib/stats';
 import VerdictCard from '../trends/VerdictCard';
+import { ExecSummary, at } from '../explain';
+import { cryptoSummary, cryptoMeans, type CryptoInputs } from '../../lib/summaries';
 import MainChart, { TT } from '../trends/MainChart';
 import SeverityChart from '../trends/SeverityChart';
 
@@ -85,6 +87,14 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
   const A = useMemo(() => Object.fromEntries(CRYPTO_STREAMS.map((s) => [s.id, analyse(s.id, H, NO_FILTERS, range, gran)])) as Record<string, ReturnType<typeof analyse>>, [H, range, gran]);
   const a = A[stream];
   const ytdTest = poissonTest(k.ytd.n, k.lytd.n);
+  const top10usd = top10.reduce((s, h) => s + (h.usd || 0), 0);
+  const ci: CryptoInputs = {
+    ok: !!fc?.data, year: new Date(now).getUTCFullYear(), ytd: k.ytd, lytd: k.lytd, d30: k.d30, p30: k.p30, pt: k.pt.p, ytdP: ytdTest.p,
+    big: k.big ? { name: k.big.name, usd: k.big.usd, day: k.big.day } : undefined, big2: k.big?.usd && k.ytd.u ? k.big.usd / k.ytd.u : 0,
+    byTech, byCat, totWin, top10: top10usd, winLabel: WIN_LABEL[win], trendBig: A.cryptobig, trendUsd: A.cryptousd,
+    vul30: vul30.length, vulKev: vul30.filter((v) => v.kev).length,
+  };
+  const cs = cryptoSummary(ci), cm = cryptoMeans(ci);
 
   return (
     <div className="flex flex-col gap-2" data-crypto-loading={[fc, fv].filter((f) => f?.status === 'loading').length}>
@@ -101,6 +111,8 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
         <span className="ml-auto text-[10px] text-slate-500">Amounts = USD at time of hack (as reported) · incident dates are UTC days · attribution is per source reporting</span>
       </div>
 
+      <ExecSummary id="crypto" title="Crypto — executive summary" s={cs} accent={ORANGE} />
+
       {/* KPI tiles */}
       <div className="grid grid-cols-2 gap-2 md:grid-cols-4 2xl:grid-cols-8">
         <Kpi label="Stolen · 24 h" v={usd(k.d1.u)} sub={`${k.d1.n} incident${k.d1.n === 1 ? '' : 's'} (by UTC date)`} sev={sevOfUsd(k.d1.u || null)} f={fc} />
@@ -116,7 +128,7 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
       {/* stream + trends + breakdowns */}
       <div className="grid grid-cols-1 gap-2 xl:grid-cols-12">
         <div className="h-[760px] xl:col-span-4 2xl:col-span-3">
-          <Panel title="Live crypto incident stream" icon={<Zap size={13} style={{ color: ORANGE }} />} feeds={[fc, fv, fr].filter(Boolean)} bodyClass="flex flex-col"
+          <Panel info="cryptoStream" title="Live crypto incident stream" icon={<Zap size={13} style={{ color: ORANGE }} />} feeds={[fc, fv, fr].filter(Boolean)} bodyClass="flex flex-col"
             right={<span className="mono text-[10px] text-slate-500">{shown.length}</span>}>
             <div className="flex flex-wrap gap-1 border-b border-ink-700/60 px-2 py-1.5">
               {(['hack', 'news', 'vuln', 'ransomware'] as const).map((x) => { const on = kinds.has(x); const n = items.filter((i) => i.kind === x).length; return (
@@ -144,26 +156,26 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
           <div className="grid grid-cols-3 gap-2">
             {CRYPTO_STREAMS.map((s) => <VerdictCard key={s.id} a={A[s.id]} selected={stream === s.id} onClick={() => setStream(s.id)} filtered={filtered} />)}
           </div>
-          <div className="h-[420px]"><Panel title={<>{a.meta.label} <span className="normal-case tracking-normal text-slate-500">· {a.gran}ly{filtered ? ' · filtered' : ''}</span></>} icon={<TrendingUp size={13} style={{ color: ORANGE }} />}
+          <div className="h-[420px]"><Panel info="trendsMain" title={<>{at(a.meta.label)} <span className="normal-case tracking-normal text-slate-500">· {a.gran}ly{filtered ? ' · filtered' : ''}</span></>} icon={<TrendingUp size={13} style={{ color: ORANGE }} />}
             right={<div className="flex items-center gap-1.5">
               <div className="flex overflow-hidden rounded-md border border-ink-600">{(Object.keys(RANGES) as RangeId[]).map((r) => <button key={r} onClick={() => setRange(r)} className={clsx('px-2 py-0.5 text-[10.5px]', range === r ? 'bg-[#f7931a]/15 text-[#f7931a]' : 'text-slate-400 hover:text-white')}>{r}</button>)}</div>
               <div className="flex overflow-hidden rounded-md border border-ink-600">{(['auto', 'week', 'month'] as const).map((g) => <button key={g} onClick={() => setGran(g)} className={clsx('px-2 py-0.5 text-[10.5px] capitalize', gran === g ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white')}>{g}</button>)}</div>
             </div>} bodyClass="p-2"><MainChart a={a} /></Panel></div>
-          <div className="min-h-[188px] flex-1"><Panel title="Is crypto crime getting worse? — the statistics" icon={<Sigma size={13} style={{ color: ORANGE }} />} bodyClass="overflow-y-auto px-3 py-2 text-[11.5px] leading-relaxed text-slate-300">
+          <div className="min-h-[188px] flex-1"><Panel info="cryptoStats" means={cm.stats} title="Is crypto crime getting worse? — the statistics" icon={<Sigma size={13} style={{ color: ORANGE }} />} bodyClass="overflow-y-auto px-3 py-2 text-[11.5px] leading-relaxed text-slate-300">
             {a.sentence.map((s, i) => <p key={i} className="mb-1" dangerouslySetInnerHTML={{ __html: s.replace(/^(RISING|FALLING|STABLE)/, (m) => `<b style="color:${m === 'RISING' ? '#ff2d55' : m === 'FALLING' ? '#22c55e' : '#94a3b8'}">${m}</b>`) }} />)}
             {k.ytd.n + k.lytd.n > 0 && <p className="mb-1">Year to date vs the same period last year: <b>{k.ytd.n}</b> vs <b>{k.lytd.n}</b> incidents ({fmtPct(k.lytd.n ? ((k.ytd.n - k.lytd.n) / k.lytd.n) * 100 : null)}; exact Poisson test {fmtP(ytdTest.p)}{ytdTest.p >= 0.05 ? ', not significant' : ''}); {usd(k.ytd.u, 0)} vs {usd(k.lytd.u, 0)} stolen{k.lytd.u ? ` (${fmtPct(((k.ytd.u - k.lytd.u) / k.lytd.u) * 100)})` : ''}. USD totals are dominated by a few very large hacks, so the rank-based tests above are the better guide to direction.</p>}
           </Panel></div>
         </div>
 
         <div className="grid grid-cols-1 gap-2 md:grid-cols-3 xl:col-span-12 2xl:col-span-3 2xl:grid-cols-1">
-          <div className="h-[300px]"><Panel title={<>Losses by technique <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}</span></>} icon={<Swords size={13} style={{ color: ORANGE }} />} bodyClass="overflow-y-auto px-2.5 py-1.5">
+          <div className="h-[300px]"><Panel info="cryptoTech" means={cm.tech} title={<>{at('Losses by technique')} <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}</span></>} icon={<Swords size={13} style={{ color: ORANGE }} />} bodyClass="overflow-y-auto px-2.5 py-1.5">
             <BarList rows={byTech} total={totWin} onPick={(x) => setGroup(group === x ? '' : x)} active={group} color="#ff2d55" />
           </Panel></div>
-          <div className="h-[200px]"><Panel title={<>By category <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}</span></>} icon={<Layers size={13} style={{ color: ORANGE }} />} bodyClass="flex items-center gap-2 px-2">
+          <div className="h-[200px]"><Panel info="cryptoCat" title={<>{at('By category')} <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}</span></>} icon={<Layers size={13} style={{ color: ORANGE }} />} bodyClass="flex items-center gap-2 px-2">
             <div className="h-full w-[130px] shrink-0"><ResponsiveContainer><PieChart><Pie data={byCat} dataKey="usd" nameKey="key" innerRadius={34} outerRadius={58} stroke="#09101b" isAnimationActive={false} onClick={(d: any) => setCat(cat === d.key ? '' : d.key)}>{byCat.map((r) => <Cell key={r.key} fill={CAT_COLOR[r.key] || '#64748b'} />)}</Pie><Tooltip {...TT} formatter={(v: any) => usd(v)} /></PieChart></ResponsiveContainer></div>
             <ul className="min-w-0 flex-1 space-y-0.5 text-[11px]">{byCat.map((r) => <li key={r.key}><button onClick={() => setCat(cat === r.key ? '' : r.key)} className={clsx('flex w-full items-center gap-1.5 rounded px-1 hover:bg-white/5', cat === r.key && 'bg-white/10')}><span className="h-2 w-2 rounded-sm" style={{ background: CAT_COLOR[r.key] || '#64748b' }} /><span className="truncate text-slate-300">{r.key}</span><span className="mono ml-auto text-slate-400">{usd(r.usd)}</span><span className="mono w-8 text-right text-slate-600">{r.n}</span></button></li>)}</ul>
           </Panel></div>
-          <div className="h-[244px]"><Panel title={<>By chain <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}</span></>} icon={<Link2 size={13} style={{ color: ORANGE }} />} bodyClass="overflow-y-auto px-2.5 py-1.5">
+          <div className="h-[244px]"><Panel info="cryptoChain" title={<>{at('By chain')} <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}</span></>} icon={<Link2 size={13} style={{ color: ORANGE }} />} bodyClass="overflow-y-auto px-2.5 py-1.5">
             <BarList rows={byChain.slice(0, 14)} total={totWin} onPick={(x) => setChain(chain === x ? '' : x)} active={chain} color={ORANGE} note="Multi-chain incidents count in full toward each chain listed." />
           </Panel></div>
         </div>
@@ -172,10 +184,10 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
       {/* top 10 + vulns + severity */}
       <div className="grid grid-cols-1 gap-2 xl:grid-cols-12">
         <div className="h-[420px] xl:col-span-7 2xl:col-span-6">
-          <Panel title={<>Top 10 biggest incidents <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}{filtered ? ' · filtered' : ''}</span></>} icon={<ListOrdered size={13} style={{ color: ORANGE }} />} feeds={fc ? [fc] : []} bodyClass="overflow-auto">
+          <Panel info="cryptoTop" means={cm.top} title={<>{at('Top 10 biggest incidents')} <span className="normal-case tracking-normal text-slate-500">· {WIN_LABEL[win]}{filtered ? ' · filtered' : ''}</span></>} icon={<ListOrdered size={13} style={{ color: ORANGE }} />} feeds={fc ? [fc] : []} bodyClass="overflow-auto">
             {!fc?.data ? <Offline f={fc} what="DeFiLlama hacks dataset" /> : (
               <table className="w-full text-[11.5px]">
-                <thead className="sticky top-0 bg-ink-900 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-1.5 text-left">#</th><th className="text-left">Date (UTC)</th><th className="text-left">Target</th><th className="text-right">Lost</th><th className="text-right">Returned</th><th className="pl-3 text-left">Technique</th><th className="text-left">Chain</th><th className="pr-2 text-left">Category</th></tr></thead>
+                <thead className="sticky top-0 bg-ink-900 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-2 py-1.5 text-left">#</th><th className="text-left">Date (UTC)</th><th className="text-left">Target</th><th className="text-right">Lost</th><th className="text-right">{at('Returned')}</th><th className="pl-3 text-left">Technique</th><th className="text-left">{at('Chain')}</th><th className="pr-2 text-left">Category</th></tr></thead>
                 <tbody>{top10.map((h, i) => (
                   <tr key={h.id} data-top={i} onClick={() => setOpen(hackItem(h))} className="cursor-pointer border-t border-ink-700/50 hover:bg-white/[.04]">
                     <td className="mono px-2 py-1.5 text-slate-500">{i + 1}</td><td className="mono text-slate-400">{h.day}</td>
@@ -190,13 +202,13 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
           </Panel>
         </div>
         <div className="h-[420px] xl:col-span-5 2xl:col-span-3">
-          <Panel title="Crypto-related vulnerabilities" icon={<Bug size={13} style={{ color: ORANGE }} />} feeds={fv ? [fv] : []} bodyClass="overflow-y-auto"
+          <Panel info="cryptoVulns" means={cm.vulns} title="Crypto-related vulnerabilities" icon={<Bug size={13} style={{ color: ORANGE }} />} feeds={fv ? [fv] : []} bodyClass="overflow-y-auto"
             right={<span className="text-[10px] text-slate-500">KEV + NVD keyword · 120d</span>}>
             {!fv?.data ? <Offline f={fv} what="Crypto vulnerability sources" /> : (
               <ul className="divide-y divide-ink-700/50">{vulns.slice(0, 80).map((v) => (
                 <li key={v.id}><button onClick={() => setOpen({ id: v.id, kind: 'vuln', t: Date.parse(v.date), sev: v.sev, title: `${v.id} · ${v.title}`, sub: v.src, link: v.link, raw: v, why: v.sevReason })} className="flex w-full items-start gap-2 px-2.5 py-1.5 text-left hover:bg-white/[.03]">
                   <CvssBadge score={v.score} />
-                  <span className="min-w-0 flex-1"><span className="mono text-[11px] text-cyan-glow">{v.id}</span>{v.kev && <span className="chip ml-1 border border-sev-critical/50 text-sev-critical">KEV</span>}<span className="line-clamp-2 text-[11px] text-slate-300">{v.title}</span></span>
+                  <span className="min-w-0 flex-1"><span className="mono text-[11px] text-cyan-glow">{v.id}</span>{v.kev && <span className="chip ml-1 border border-sev-critical/50 text-sev-critical">{at('KEV')}</span>}<span className="line-clamp-2 text-[11px] text-slate-300">{v.title}</span></span>
                   <span className="mono shrink-0 text-[10px] text-slate-500">{v.date}</span>
                 </button></li>))}
                 {!vulns.length && <li className="p-6 text-center text-xs text-slate-500">No crypto-related CVEs matched in the last 120 days.</li>}
@@ -204,7 +216,7 @@ export default function Crypto({ feeds, now }: { feeds: Record<string, FeedState
           </Panel>
         </div>
         <div className="h-[420px] xl:col-span-12 2xl:col-span-3">
-          <Panel title="Incident size mix over time" icon={<Skull size={13} style={{ color: ORANGE }} />} bodyClass="p-2"><SeverityChart a={A.cryptohacks} /></Panel>
+          <Panel info="cryptoSize" title="Incident size mix over time" icon={<Skull size={13} style={{ color: ORANGE }} />} bodyClass="p-2"><SeverityChart a={A.cryptohacks} /></Panel>
         </div>
       </div>
 
@@ -284,10 +296,10 @@ function Kpi({ label, v, sub, sev, f, color, onClick }: { label: string; v: stri
   const c = color || (sev === 'low' ? '#e2e8f0' : SEV_COLOR[sev]);
   return (
     <button onClick={onClick} className={clsx('panel flex min-h-[92px] flex-col px-3 py-2 text-left', !onClick && 'cursor-default')} style={sev === 'critical' && !off ? { boxShadow: 'inset 0 0 22px rgba(255,45,85,.18)' } : undefined}>
-      <span className="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">{label}</span>
+      <span className="text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">{at(label)}</span>
       {off ? <span className="mt-1 text-[13px] font-semibold" style={{ color: f?.status === 'loading' ? '#64748b' : '#ff2d55' }}>{f?.status === 'loading' ? 'Loading…' : 'OFFLINE'}</span>
         : <span className="mono mt-0.5 text-[24px] font-bold leading-tight" style={{ color: c, textShadow: sev === 'critical' ? '0 0 12px rgba(255,45,85,.6)' : undefined }}>{v}</span>}
-      {!off && <span className="mt-auto truncate text-[10.5px] text-slate-500">{sub}</span>}
+      {!off && <span className="mt-auto truncate text-[10.5px] text-slate-500">{at(sub)}</span>}
     </button>
   );
 }

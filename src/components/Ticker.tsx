@@ -11,7 +11,7 @@ export default function Ticker({ events, fresh, onPick, feeds, now }: { events: 
   const [onlyHot, setOnlyHot] = useState(false);
   const list = useMemo(() => (onlyHot ? events.filter((e) => e.sev === 'critical' || e.sev === 'high') : events).slice(0, 250), [events, onlyHot]);
   return (
-    <Panel title={<>Live incident stream <span className="mono text-cyan-glow">{events.length}</span></>} icon={<Zap size={13} className="text-cyan-glow" />} feeds={feeds}
+    <Panel info="ticker" title={<>Live incident stream <span className="mono text-cyan-glow">{events.length}</span></>} icon={<Zap size={13} className="text-cyan-glow" />} feeds={feeds}
       right={<button className={clsx('btn !px-2 !py-0.5 text-[10px]', onlyHot && 'btn-on')} onClick={() => setOnlyHot((v) => !v)}>High+ only</button>}
       bodyClass="overflow-y-auto thin-scroll">
       {!list.length && <div className="p-6 text-center text-xs text-slate-500">No events match the current filters.</div>}

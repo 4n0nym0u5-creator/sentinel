@@ -1,3 +1,4 @@
+import { at } from './explain';
 import type { ReactNode } from 'react';
 import { Area, AreaChart, ResponsiveContainer } from 'recharts';
 import { Skull, Bug, ShieldAlert, Radio, Crosshair, Siren, Activity } from 'lucide-react';
@@ -9,7 +10,7 @@ import { PORTS } from '../lib/format';
 function Tile({ icon, label, value, sub, color, spark, alert, offline, onClick }: { icon: ReactNode; label: string; value: ReactNode; sub?: ReactNode; color: string; spark?: number[]; alert?: boolean; offline?: boolean; onClick?: () => void }) {
   return (
     <button onClick={onClick} className={clsx('panel group flex min-w-0 flex-col overflow-hidden px-3 py-2 text-left transition hover:border-cyan-glow/40', alert && 'animate-pulsered border-sev-critical/60')}>
-      <div className="flex items-center justify-between"><span className="panel-title !text-[10px]" style={{ color }}>{icon}{label}</span>{offline && <span className="chip bg-sev-critical/15 text-sev-critical">offline</span>}</div>
+      <div className="flex items-center justify-between"><span className="panel-title !text-[10px]" style={{ color }}>{icon}{at(label)}</span>{offline && <span className="chip bg-sev-critical/15 text-sev-critical">offline</span>}</div>
       <div className="mt-0.5 flex items-end justify-between gap-2">
         <div className="mono text-[26px] font-semibold leading-none text-white" style={{ textShadow: `0 0 18px ${color}55` }}>{offline ? '—' : value}</div>
         {spark && spark.length > 1 && !offline && (
@@ -21,7 +22,7 @@ function Tile({ icon, label, value, sub, color, spark, alert, offline, onClick }
           </div>
         )}
       </div>
-      <div className="mt-1 truncate text-[10.5px] text-slate-400">{sub}</div>
+      <div className="mt-1 truncate text-[10.5px] text-slate-400">{at(sub)}</div>
     </button>
   );
 }

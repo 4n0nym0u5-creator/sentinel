@@ -30,3 +30,8 @@ body {
 @keyframes blink { 50% { opacity: .25; } }
 .blink { animation: blink 1.2s steps(2, start) infinite; }
 .recharts-tooltip-wrapper { outline: none; }
+
+/* glossary terms */
+.term { text-decoration-line: underline; text-decoration-style: dotted; text-decoration-color: rgba(34, 227, 255, .55); text-underline-offset: 3px; text-decoration-thickness: 1px; cursor: help; border-radius: 2px; outline: none; }
+.term:hover, .term[aria-expanded='true'] { text-decoration-color: rgba(34, 227, 255, 1); color: #e6fbff; }
+.term:focus-visible { box-shadow: 0 0 0 1px rgba(34, 227, 255, .7); }

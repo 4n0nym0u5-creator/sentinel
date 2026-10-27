@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { Bar as RBar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, AreaChart, Area } from 'recharts';
@@ -9,7 +10,7 @@ import { PORTS, fmt } from '../lib/format';
 const TT = { contentStyle: { background: '#09101b', border: '1px solid #2a4062', borderRadius: 6, fontSize: 11 }, itemStyle: { color: '#e2e8f0' }, labelStyle: { color: '#94a3b8' } };
 const ICS = new Set([502, 102, 47808, 20000, 44818, 1911]);
 
-export default function InfraPanel({ feeds, events, onPick, onCountry }: { feeds: Record<string, FeedState>; events: Ev[]; onPick: (e: Ev) => void; onCountry: (cc: string) => void }) {
+export default function InfraPanel({ feeds, events, onPick, onCountry, means }: { feeds: Record<string, FeedState>; events: Ev[]; onPick: (e: Ev) => void; onCountry: (cc: string) => void; means?: ReactNode }) {
   const [tab, setTab] = useState<'ports' | 'sources' | 'c2' | 'trend'>('ports');
   const ds = feeds.dshield.data;
   const att = useMemo(() => events.filter((e) => e.type === 'attack'), [events]);
@@ -22,7 +23,7 @@ export default function InfraPanel({ feeds, events, onPick, onCountry }: { feeds
   }, [c2, ioc]);
   const byCountry = useMemo(() => { const m = new Map<string, number>(); att.forEach((e) => e.country && m.set(e.country, (m.get(e.country) || 0) + e.raw.attacks)); return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8); }, [att]);
   return (
-    <Panel title="Attack infrastructure & malware" icon={<Crosshair size={13} className="text-sev-low" />} feeds={[feeds.dshield, feeds.c2, feeds.threatfox]} bodyClass="flex flex-col">
+    <Panel info="infra" means={means} title="Attack infrastructure & malware" icon={<Crosshair size={13} className="text-sev-low" />} feeds={[feeds.dshield, feeds.c2, feeds.threatfox]} bodyClass="flex flex-col">
       <div className="flex gap-1 border-b border-ink-700 px-2 py-1">
         {([['ports', 'Targeted ports'], ['sources', 'Attack sources'], ['c2', 'C2 & malware'], ['trend', 'Sensor trend']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={clsx('btn !px-2 !py-0.5 text-[10px]', tab === k && 'btn-on')}>{l}</button>

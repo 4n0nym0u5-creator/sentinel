@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import clsx from 'clsx';
 import { ShieldAlert } from 'lucide-react';
@@ -5,13 +6,13 @@ import type { Ev, FeedState } from '../lib/types';
 import { Panel, Offline, CvssBadge, EpssBar, SevBadge } from './ui';
 import { ago } from '../lib/format';
 
-export default function VulnPanel({ feeds, events, onPick, now }: { feeds: Record<string, FeedState>; events: Ev[]; onPick: (e: Ev) => void; now: number }) {
+export default function VulnPanel({ feeds, events, onPick, now, means }: { feeds: Record<string, FeedState>; events: Ev[]; onPick: (e: Ev) => void; now: number; means?: ReactNode }) {
   const [tab, setTab] = useState<'kev' | 'nvd' | 'euvd'>('kev');
   const list = useMemo(() => events.filter((e) => e.type === 'vuln' && e.raw.kind === tab), [events, tab]);
   const f = feeds[tab];
   const cnt = (k: string) => events.filter((e) => e.type === 'vuln' && e.raw.kind === k).length;
   return (
-    <Panel title="Exploited & critical vulnerabilities" icon={<ShieldAlert size={13} className="text-sev-critical" />} feeds={[feeds.kev, feeds.nvd, feeds.euvd]} bodyClass="flex flex-col">
+    <Panel info="vulns" means={means} title="Exploited & critical vulnerabilities" icon={<ShieldAlert size={13} className="text-sev-critical" />} feeds={[feeds.kev, feeds.nvd, feeds.euvd]} bodyClass="flex flex-col">
       <div className="flex gap-1 border-b border-ink-700 px-2 py-1">
         {([['kev', 'CISA KEV'], ['nvd', 'NVD critical'], ['euvd', 'ENISA EUVD']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setTab(k)} className={clsx('btn !px-2 !py-0.5 text-[10px]', tab === k && 'btn-on')}>{l} <span className="mono opacity-70">{cnt(k)}</span></button>
