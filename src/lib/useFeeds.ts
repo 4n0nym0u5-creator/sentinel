@@ -12,6 +12,7 @@ const DEFS: { id: string; label: string; poll: number }[] = [
   { id: 'news', label: 'News & advisories (69 RSS, all regions)', poll: 180 },
   { id: 'crypto', label: 'Crypto hacks + crypto-security RSS', poll: 600 },
   { id: 'cryptovulns', label: 'Crypto vulns (KEV + NVD)', poll: 3600 },
+  { id: 'frontier', label: 'Frontier: AI & quantum crypto-break watch (32 feeds)', poll: 900 },
 ];
 
 /** Polls each feed independently. Keeps last-good data; marks STALE when a poll fails or data ages past 3× poll. */

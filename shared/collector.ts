@@ -8,6 +8,7 @@ import { FEEDS, NEWS_SOURCES, REGIONAL_SOURCES, REGIONAL_BATCH, ALL_NEWS_SOURCES
 import { CRYPTO_RSS, CRYPTO_NVD_TERMS, hackResult, assembleCrypto, cryptoVulnsKev, cryptoVulnsNvd, assembleCryptoVulns } from './crypto';
 import { kevHistory, dshieldHistory, nvdHistory, nvdStep, snapshotHistory, recordSnapshot, resetHistoryCaches, ransomwareYear, assembleRansomwareHistory, ransomwareLiveFrom, RW_FIRST_YEAR, HISTORY, type RwChunk, type HistoryPayload } from './history';
 import type { RawStore, D1Like } from './d1Store';
+import { FRONTIER_SOURCES, FRONTIER_RETAIN_DAYS, frontierSource, assembleFrontier } from './frontier';
 
 const MIN = 60, HOUR = 3600, DAYS = 86400;
 type Ctx = { env: Env; store: RawStore };
@@ -96,6 +97,16 @@ function tasks(): Task[] {
     await c.store.put(`src:crypto:${s.name}`, await rssSource(s));
     await assembleCryptoFeed(c);
   } }));
+  // Frontier (AI / quantum crypto-break watch): one task per source every 2 h, items kept FRONTIER_RETAIN_DAYS (180 d).
+  // arXiv API queries and byte-capped big feeds are "heavy" (at most one per collector minute — also arXiv etiquette).
+  FRONTIER_SOURCES.forEach((s) => T.push({ id: `fr:${s.name}`, every: 2 * HOUR, light: !s.arxiv && !s.prefix, run: async (c) => {
+    const prev = await c.store.get(`src:fr:${s.name}`).catch(() => null);
+    await c.store.put(`src:fr:${s.name}`, retainNews(prev as any, await frontierSource(s), 200, FRONTIER_RETAIN_DAYS));
+  } }));
+  T.push({ id: 'frontier:assemble', every: 15 * MIN, run: async (c) => {
+    const got = await c.store.getPrefix('src:fr:');
+    await c.store.put('feed:frontier', feedEnvelope('frontier', 15 * MIN, () => assembleFrontier(FRONTIER_SOURCES.map((s) => got[s.name] || notYet(s.name, s.url)))));
+  } });
   T.push({ id: 'crypto:hacks', every: HOUR, run: async (c) => { await c.store.put('src:crypto:__hacks', await hackResult()); await assembleCryptoFeed(c); } });
   T.push({ id: 'kev', every: 30 * MIN, run: async (c) => {
     let cat: any = null, err: any = null;

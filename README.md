@@ -107,6 +107,14 @@ API endpoints:
 
 **Cloudflare design.** When deployed, nothing heavy runs inside a web request. The cron Worker in `worker/` (`sentinel-collector`) does all upstream fetching, history building and snapshotting (`shared/collector.ts`). It writes ready-to-serve JSON into the **D1** database `sentinel-store`. The Pages Functions only read those rows. See *Deploy to Cloudflare* below.
 
+## Frontier: AI & quantum crypto-break watch (`#/frontier`)
+
+Tracks research and announcements that could weaken today's cryptography or crack important maths problems, from 32 public feeds (AI labs, quantum-computing companies and news, cryptography research incl. IACR ePrint, NIST / standards, Quanta & Terry Tao for maths, and four arXiv API queries). Source list, relevance gates and dropped sources (with reasons) live in `shared/frontier.ts`.
+
+- **Collection:** one cron task per source every 2 h (`fr:<source>`; arXiv and byte-capped feeds are "heavy" so at most one runs per minute), assembled into `feed:frontier` every 15 min. Items are retained **180 days**. Failed sources show OFFLINE — nothing is invented.
+- **Ranking (automated estimate, rules only — no LLM):** *Impact 1–5* = what breaks if the line of work succeeds (5 = RSA / elliptic-curve public-key crypto; 4 = post-quantum standards, AES / SHA; 3 = quantum error correction, protocol attacks, AI theorem-proving; 2 = general quantum / maths; 1 = other). *Proximity 1–5* = how close to a practical break (5 = practical attack on a deployed algorithm; 4 = practical implementation attack or new real-key-size resource estimate; 3 = reduced-round / partial attack, hardware demonstration, AI maths result; 2 = theory; 1 = commentary / defence). Rank = Impact × Proximity, then Impact, then recency. Toy demos and hype headlines are capped at Proximity 2. Every item shows its reasons.
+- **Reference panels:** a sourced Q-Day milestone timeline + "needed vs built" gap (`src/lib/qday.ts`, hand-curated, review date shown) and an at-risk vs quantum-safe algorithm table.
+
 ## Deploy to Cloudflare (Pages + cron Worker + D1), passcode-gated
 
 **Live:** https://sentinel-cyber-monitor.pages.dev (production branch `main`). There is no Git integration; deploys go straight from the CLI.

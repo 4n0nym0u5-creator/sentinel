@@ -210,7 +210,7 @@ export function ExplainControls() {
 }
 
 // ---------------------------------------------------------------- glossary drawer
-const CATS: GlossCat[] = ['Vulnerabilities', 'Attacks & malware', 'Internet & networks', 'Crypto', 'Statistics', 'Sources', 'This dashboard'];
+const CATS: GlossCat[] = ['Vulnerabilities', 'Attacks & malware', 'Internet & networks', 'Crypto', 'Statistics', 'Sources', 'Quantum & PQC', 'This dashboard'];
 function GlossaryDrawer({ focus, onClose }: { focus?: string; onClose: () => void }) {
   const [q, setQ] = useState(focus ? GLOSS[focus]?.term ?? '' : '');
   const [cat, setCat] = useState<GlossCat | ''>('');

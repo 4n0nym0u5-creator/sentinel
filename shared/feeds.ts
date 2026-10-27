@@ -7,6 +7,7 @@
  */
 import { XMLParser } from 'fast-xml-parser';
 import { cryptoFeed, cryptoVulns } from './crypto';
+import { frontierFeed } from './frontier';
 
 export type Env = Record<string, string | undefined>;
 export interface FeedResult {
@@ -59,7 +60,7 @@ export async function getJSON(url: string, init: RequestInit = {}, timeoutMs = 2
 }
 
 /** Read only the first `maxBytes` of a response body (for very large feeds). */
-async function readPrefix(res: Response, maxBytes: number): Promise<string> {
+export async function readPrefix(res: Response, maxBytes: number): Promise<string> {
   const reader = res.body!.getReader();
   const dec = new TextDecoder();
   let out = '';
@@ -460,7 +461,7 @@ export function pickLink(l: any): string {
   if (typeof l === 'object') return String(l['@href'] ?? txt(l)).trim();
   return String(l).trim();
 }
-export function parseFeedItems(body: string, src: { name: string; filter?: boolean; tz?: string }, max = 40) {
+export function parseFeedItems(body: string, src: { name: string; filter?: boolean; tz?: string; sum?: number }, max = 40) {
   const doc = xml.parse(body);
   const raw = doc?.rss?.channel?.item ?? doc?.feed?.entry ?? doc?.['rdf:RDF']?.item ?? [];
   const list: any[] = Array.isArray(raw) ? raw : [raw];
@@ -479,7 +480,7 @@ export function parseFeedItems(body: string, src: { name: string; filter?: boole
       title: strip(txt(it.title), 220),
       link,
       published: isNaN(t) ? null : new Date(t).toISOString(),
-      summary: strip(txt(it.description) || txt(it.summary) || txt(it['content:encoded']) || txt(it.content), 300),
+      summary: strip(txt(it.description) || txt(it.summary) || txt(it['content:encoded']) || txt(it.content), src.sum ?? 300),
       tags: cats,
     };
     if (!item.title) continue;
@@ -559,6 +560,7 @@ export const FEEDS: Record<string, { label: string; ttl: number; poll: number; r
   news: { label: 'Security news & advisories', ttl: 300, poll: 180, run: news },
   crypto: { label: 'Crypto hacks (DeFiLlama) & crypto-security news', ttl: 600, poll: 600, run: cryptoFeed },
   cryptovulns: { label: 'Crypto-related vulns (KEV + NVD keyword)', ttl: 6 * 3600, poll: 3600, run: cryptoVulns },
+  frontier: { label: 'Frontier: AI & quantum crypto-break watch', ttl: 1800, poll: 900, run: () => frontierFeed() },
 };
 
 const memo = new Map<string, { at: number; value: FeedResult; pending?: Promise<FeedResult> }>();

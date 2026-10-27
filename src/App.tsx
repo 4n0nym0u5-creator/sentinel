@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import clsx from 'clsx';
-import { Search, Volume2, VolumeX, Maximize, Minimize, RefreshCw, Activity, Globe2, Filter, X, Radio, TrendingUp, Bitcoin, Power } from 'lucide-react';
+import { Search, Volume2, VolumeX, Maximize, Minimize, RefreshCw, Activity, Globe2, Filter, X, Radio, TrendingUp, Bitcoin, Atom, Power } from 'lucide-react';
 const Trends = lazy(() => import('./components/trends/Trends'));
 const Crypto = lazy(() => import('./components/crypto/Crypto'));
+const Frontier = lazy(() => import('./components/frontier/Frontier'));
 import { useFeeds } from './lib/useFeeds';
 import { buildEvents, computeThreat } from './lib/model';
 import type { EType, Ev, Sev } from './lib/types';
@@ -32,8 +33,8 @@ type Win = keyof typeof WINDOWS;
 const TYPES: EType[] = ['ransomware', 'vuln', 'c2', 'attack', 'news', 'ioc'];
 const FEED_OF = (e: Ev) => (e.type === 'vuln' ? e.raw.kind : e.type === 'attack' ? 'dshield' : e.type === 'ioc' ? 'threatfox' : e.type);
 
-type Tab = 'live' | 'trends' | 'crypto';
-function useHashTab() { const get = (): Tab => (location.hash.startsWith('#/trends') ? 'trends' : location.hash.startsWith('#/crypto') ? 'crypto' : 'live'); const [t, setT] = useState(get); useEffect(() => { const f = () => setT(get()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []); return [t, (v: Tab) => { location.hash = v === 'live' ? '#/' : `#/${v}`; }] as const; }
+type Tab = 'live' | 'trends' | 'crypto' | 'frontier';
+function useHashTab() { const get = (): Tab => (location.hash.startsWith('#/trends') ? 'trends' : location.hash.startsWith('#/crypto') ? 'crypto' : location.hash.startsWith('#/frontier') ? 'frontier' : 'live'); const [t, setT] = useState(get); useEffect(() => { const f = () => setT(get()); window.addEventListener('hashchange', f); return () => window.removeEventListener('hashchange', f); }, []); return [t, (v: Tab) => { location.hash = v === 'live' ? '#/' : `#/${v}`; }] as const; }
 function useNow(ms = 1000) { const [n, setN] = useState(Date.now()); useEffect(() => { const i = setInterval(() => setN(Date.now()), ms); return () => clearInterval(i); }, [ms]); return n; }
 
 export default function App() {
@@ -153,6 +154,7 @@ export default function App() {
           <button onClick={() => setTab('live')} data-tab="live" className={clsx('flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider', tab === 'live' ? 'bg-cyan-glow/15 text-cyan-glow' : 'text-slate-400 hover:text-white')}><Radio size={13} />Live</button>
           <button onClick={() => setTab('trends')} data-tab="trends" className={clsx('flex items-center gap-1.5 border-l border-ink-600 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider', tab === 'trends' ? 'bg-cyan-glow/15 text-cyan-glow' : 'text-slate-400 hover:text-white')}><TrendingUp size={13} />Trends</button>
           <button onClick={() => setTab('crypto')} data-tab="crypto" className={clsx('flex items-center gap-1.5 border-l border-ink-600 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider', tab === 'crypto' ? 'bg-[#f7931a]/15 text-[#f7931a]' : 'text-slate-400 hover:text-white')}><Bitcoin size={13} />Crypto</button>
+          <button onClick={() => setTab('frontier')} data-tab="frontier" title="Frontier: AI & quantum breakthroughs that could break cryptography" className={clsx('flex items-center gap-1.5 border-l border-ink-600 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider', tab === 'frontier' ? 'bg-[#a78bfa]/15 text-[#a78bfa]' : 'text-slate-400 hover:text-white')}><Atom size={13} />Frontier</button>
         </nav>
         <ThreatGauge t={threat} />
         <div className="ml-auto flex flex-wrap items-center gap-3">
@@ -177,6 +179,7 @@ export default function App() {
         </div>
       )}
       {tab === 'trends' ? <Suspense fallback={<div className="p-10 text-center text-xs text-slate-500">Loading trends…</div>}><Trends /></Suspense>
+      : tab === 'frontier' ? <Suspense fallback={<div className="p-10 text-center text-xs text-slate-500">Loading Frontier view…</div>}><Frontier feeds={feeds} now={now} /></Suspense>
       : tab === 'crypto' ? <Suspense fallback={<div className="p-10 text-center text-xs text-slate-500">Loading crypto view…</div>}><Crypto feeds={feeds} now={now} /></Suspense> : <>
       {/* ---------- filters ---------- */}
       <div className="panel flex flex-wrap items-center gap-2 px-3 py-1.5">
