@@ -36,7 +36,9 @@ jobs:
           test -f functions/_middleware.ts || { echo "::error::functions/_middleware.ts (passcode gate) missing"; exit 1; }
           grep -q SITE_PASSCODE functions/_middleware.ts || { echo "::error::gate does not use SITE_PASSCODE"; exit 1; }
       - name: D1 schema (idempotent)
-        run: npx wrangler d1 execute sentinel-store --remote --file migrations/0001_init.sql -y
+        # --command uses the D1 query API (no bulk import, no DB lock); statements are CREATE ... IF NOT EXISTS.
+        # Needs token permission Account › D1 › Edit.
+        run: npx wrangler d1 execute sentinel-store --remote -y --command "$(grep -v '^--' migrations/0001_init.sql | tr '\n' ' ')"
       - name: Deploy Pages (production branch main, with functions/)
         run: npx wrangler pages deploy dist --project-name sentinel-cyber-monitor --branch main --commit-hash "$GITHUB_SHA" --commit-message "${GITHUB_SHA::7}"
       - name: Deploy collector Worker (cron)
