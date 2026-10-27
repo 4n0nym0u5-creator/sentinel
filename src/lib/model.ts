@@ -1,4 +1,5 @@
 import { newsSeverity } from '../../shared/newsSev';
+import { clusterNews } from './cluster';
 import type { Ev, FeedState, Sev } from './types';
 import { detectCountries } from './countries';
 
@@ -72,15 +73,7 @@ export function buildEvents(feeds: Record<string, FeedState>): Ev[] {
       sevReason: i < 5 ? `Top-5 most active source across DShield sensors (rank ${i + 1}) → High` : `Top-40 DShield attacking source (rank ${i + 1}) → Medium`, tags: ['Scanning'], raw: { ...a, rank: i + 1 },
     });
   });
-  for (const n of feeds.news?.data?.items || []) {
-    const text = `${n.title} ${n.summary}`;
-    const { sev, why } = newsSeverity(text);
-    const ccs = detectCountries(text);
-    ev.push({
-      id: 'news:' + n.id, type: 'news', sev, time: Date.parse(n.published) || now, title: n.title, subtitle: n.summary, country: ccs[0] || null,
-      source: n.source, link: n.link, sevReason: why, tags: [...n.tags.slice(0, 3)], raw: { ...n, countries: ccs },
-    });
-  }
+  ev.push(...newsEvents(feeds.news?.data?.items || [], now));
   return ev.filter((e) => !isNaN(e.time)).sort((a, b) => b.time - a.time);
 }
 
@@ -136,4 +129,38 @@ export function computeThreat(feeds: Record<string, FeedState>, events: Ev[]): T
   const names = THREAT_NAMES;
   const colors = THREAT_COLORS;
   return { score, level, name: names[level], color: colors[level], signals: s };
+}
+
+const SEV_RANK: Record<string, number> = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+/** News items → events. Countries come from the text (names, demonyms, companies); a regional news outlet's home
+ *  country is used only for general local-news outlets (cyber-filtered feeds) when the text names none (ccFromSource). Reports of the same incident are clustered
+ *  into one event whose raw.related is the timeline of linked sources. */
+export function newsEvents(items: any[], now: number): Ev[] {
+  const base = items.map((n) => {
+    const text = `${n.title} ${n.summary || ''}`;
+    const { sev, why } = newsSeverity(text);
+    let ccs = detectCountries(text), fromSrc = false;
+    if (!ccs.length && n.srcLocal && n.srcCc) { ccs = [n.srcCc]; fromSrc = true; }
+    return { n, sev, why, ccs, fromSrc, time: Date.parse(n.published) || now };
+  });
+  const groups = clusterNews(base.map((b) => ({ key: b.n.id, time: b.time, title: b.n.title || '', text: b.n.summary || '', source: b.n.source })));
+  const out: Ev[] = [];
+  for (const g of groups) {
+    const m = g.idx.map((i) => base[i]).sort((a, b) => a.time - b.time);
+    const last = m[m.length - 1];
+    const top = m.reduce((a, b) => (SEV_RANK[b.sev] > SEV_RANK[a.sev] ? b : a));
+    const freq = new Map<string, number>();
+    m.forEach((x) => x.ccs.forEach((c, k) => freq.set(c, (freq.get(c) || 0) + (k === 0 ? 1.5 : 1))));
+    const ccs = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c);
+    const srcs = [...new Set(m.map((x) => x.n.source))];
+    const related = m.length > 1 ? m.map((x) => ({ source: x.n.source, time: x.time, title: x.n.title, link: x.n.link, firstSeen: !!x.n.firstSeen, lang: x.n.lang })) : undefined;
+    out.push({
+      id: 'news:' + last.n.id, type: 'news', sev: top.sev, time: last.time, title: last.n.title, subtitle: last.n.summary,
+      country: ccs[0] || null, source: last.n.source, link: last.n.link,
+      sevReason: m.length > 1 ? `${top.why} (highest of ${m.length} linked reports)` : top.why,
+      tags: [...(m.length > 1 ? [`${srcs.length} sources`] : []), ...(last.n.tags || []).slice(0, 3)],
+      raw: { ...last.n, countries: ccs, ccFromSource: ccs.length > 0 && m.every((x) => x.fromSrc || !x.ccs.length), related, incident: g.alias, sources: srcs, firstAt: m[0].time },
+    });
+  }
+  return out;
 }

@@ -4,7 +4,7 @@
  * Workers free plan. Results are written to D1 as ready-to-serve JSON; Pages Functions only read them.
  * Real data only: a failing source is stored as failed and shown OFFLINE by the UI.
  */
-import { FEEDS, NEWS_SOURCES, KEV_URL, kev, nvd, euvd, feodo, threatfox, dshield, getJSON, geoCache, setGeoBudget, rssSource, retainNews, assembleNews, type Env, type FeedResult, type SrcResult } from './feeds';
+import { FEEDS, NEWS_SOURCES, REGIONAL_SOURCES, REGIONAL_BATCH, ALL_NEWS_SOURCES, KEV_URL, kev, nvd, euvd, feodo, threatfox, dshield, getJSON, geoCache, setGeoBudget, rssSource, retainNews, assembleNews, type Env, type FeedResult, type SrcResult } from './feeds';
 import { CRYPTO_RSS, CRYPTO_NVD_TERMS, hackResult, assembleCrypto, cryptoVulnsKev, cryptoVulnsNvd, assembleCryptoVulns } from './crypto';
 import { kevHistory, dshieldHistory, nvdHistory, nvdStep, snapshotHistory, recordSnapshot, resetHistoryCaches, ransomwareYear, assembleRansomwareHistory, ransomwareLiveFrom, RW_FIRST_YEAR, HISTORY, type RwChunk, type HistoryPayload } from './history';
 import type { RawStore, D1Like } from './d1Store';
@@ -42,7 +42,7 @@ async function snapshot(c: Ctx, name: string, r: FeedResult) {
 const notYet = (name: string, url: string): SrcResult => ({ name, url, ok: false, error: 'not collected yet (collector warming up)' });
 async function assembleNewsFeed(c: Ctx) {
   const got = await c.store.getPrefix('src:news:');
-  const res = NEWS_SOURCES.map((s) => got[s.name] || notYet(s.name, s.url));
+  const res = ALL_NEWS_SOURCES.map((s) => got[s.name] || notYet(s.name, s.url));
   const r = feedEnvelope('news', 30 * MIN, () => assembleNews(res));
   await c.store.put('feed:news', r);
   return r;
@@ -74,11 +74,24 @@ async function assembleRansomware(c: Ctx) {
 
 function tasks(): Task[] {
   const T: Task[] = [];
+  // News: each core source is its own light task (store only); regional sources are fetched REGIONAL_BATCH at a time
+  // (≤ 5 subrequests) once an hour; the merged feed is re-assembled by its own task so the D1 read of every source
+  // happens once per 10 min instead of after every fetch.
   NEWS_SOURCES.forEach((s) => T.push({ id: `news:${s.name}`, every: 30 * MIN, light: true, run: async (c) => {
     const prev = await c.store.get(`src:news:${s.name}`).catch(() => null);
     await c.store.put(`src:news:${s.name}`, retainNews(prev as any, await rssSource(s)));
-    await snapshot(c, 'news', await assembleNewsFeed(c));
   } }));
+  for (let i = 0; i < REGIONAL_SOURCES.length; i += REGIONAL_BATCH) {
+    const batch = REGIONAL_SOURCES.slice(i, i + REGIONAL_BATCH);
+    T.push({ id: `newsb:${i / REGIONAL_BATCH}`, every: HOUR, run: async (c) => {
+      const got = await Promise.all(batch.map(rssSource));
+      for (let j = 0; j < batch.length; j++) {
+        const prev = await c.store.get(`src:news:${batch[j].name}`).catch(() => null);
+        await c.store.put(`src:news:${batch[j].name}`, retainNews(prev as any, got[j], 60));
+      }
+    } });
+  }
+  T.push({ id: 'news:assemble', every: 10 * MIN, run: async (c) => { await snapshot(c, 'news', await assembleNewsFeed(c)); } });
   CRYPTO_RSS.forEach((s) => T.push({ id: `crypto:${s.name}`, every: HOUR, light: true, run: async (c) => {
     await c.store.put(`src:crypto:${s.name}`, await rssSource(s));
     await assembleCryptoFeed(c);
@@ -128,7 +141,7 @@ function tasks(): Task[] {
 }
 
 /** Run the most overdue task(s). Called by the cron trigger every minute. */
-export async function runDue(db: D1Like, store: RawStore, env: Env, maxTasks = 2, log: (s: string) => void = console.log) {
+export async function runDue(db: D1Like, store: RawStore, env: Env, maxTasks = 3, log: (s: string) => void = console.log) {
   const all = tasks();
   const byId = new Map(all.map((t) => [t.id, t]));
   const now = Date.now();

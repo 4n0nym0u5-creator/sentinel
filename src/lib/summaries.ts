@@ -107,7 +107,8 @@ export function liveMeans(feeds: Record<string, FeedState>, now = Date.now()) {
     vulns: `${f.ok.kev ? `${n0(f.kev30)} exploited flaws added in 30 days${f.kevRw30 ? ` (${n0(f.kevRw30)} ransomware-linked)` : ''}. ` : ''}Exploited-list entries are being used in real attacks now and should be patched first; critical-but-unexploited flaws are a to-do list, prioritised by the likelihood bar.`,
     infra: `${f.port ? `Port ${f.port.port} (${f.port.name}) is the top target today. ` : ''}Most of this is constant automated scanning — the internet's background noise. What matters is change: a new port jumping into the top list (often right after a flaw is announced), industrial ports appearing, or botnet servers returning after a takedown.`,
     map: `${f.topCountry ? `${cname(f.topCountry[0])} has the most named ransomware victims in the last 30 days. ` : ''}Victim countries largely track where large, wealthy, well-reported economies are. Attacker countries mostly reflect where cheap servers are registered, so do not read them as who is attacking.`,
-    news: 'Government advisories (United States, United Kingdom, Australia) are the most actionable items; news coverage adds context but its volume follows media attention, not actual harm.',
+    news: 'National CERT and cyber-agency advisories are the most actionable items; news coverage adds context but its volume follows media attention (and English-language media most of all), not actual harm. A row marked "N sources" is one incident reported by several outlets — the more independent sources, the more significant it usually is.',
+    geoCoverage: 'This shows how well each country is covered by our sources, so a quiet country can be told apart from a blind spot. Countries with no live local source are seen only through international outlets, which mainly report the largest incidents.',
   };
 }
 

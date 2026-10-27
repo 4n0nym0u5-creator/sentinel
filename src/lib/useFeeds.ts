@@ -9,7 +9,7 @@ const DEFS: { id: string; label: string; poll: number }[] = [
   { id: 'c2', label: 'abuse.ch Feodo Tracker C2', poll: 600 },
   { id: 'threatfox', label: 'abuse.ch ThreatFox', poll: 600 },
   { id: 'dshield', label: 'SANS ISC / DShield', poll: 300 },
-  { id: 'news', label: 'News & advisories (11 RSS)', poll: 180 },
+  { id: 'news', label: 'News & advisories (69 RSS, all regions)', poll: 180 },
   { id: 'crypto', label: 'Crypto hacks + crypto-security RSS', poll: 600 },
   { id: 'cryptovulns', label: 'Crypto vulns (KEV + NVD)', poll: 3600 },
 ];

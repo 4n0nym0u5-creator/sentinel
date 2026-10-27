@@ -14,7 +14,7 @@ Stack: Vite + React 18 + TypeScript + Tailwind. The map uses d3-geo (Natural Ear
 - **Ransomware panel:** a 30-day trend plus breakdowns by group, sector and country, and the latest claims.
 - **Vulnerabilities panel:** the CISA KEV catalogue (due dates and known ransomware use), NVD CVSS ≥ 9 CVEs, and ENISA EUVD exploited/critical entries. Each shows CVSS badges and EPSS exploit-probability bars.
 - **Attack infrastructure panel:** DShield top targeted ports and top attacking sources (by AS country), Feodo botnet C2 servers, and the 14-day sensor trend.
-- **News and advisories:** 11 RSS sources (each kept for 14 days after it scrolls off the source feed), auto-tagged (ransomware, zero-day, breach, KEV, nation-state and so on), with the countries mentioned.
+- **News and advisories:** 69 RSS/Atom/RDF feeds across every region: 12 global outlets, national CERTs and regional news for AU, NZ, UK, EU, DE, FR, NL, BE, AT, CH, IT, ES, PL, FI, SE, NO, UA, CA, BR, LatAm, JP, KR, HK, IN, Asia, the Middle East and Africa. Items are kept 14 days after they scroll off the source. General local outlets are keyword-filtered (multilingual EN/ES/PT/DE/FR/JA/KO) to cyber stories. Non-English feeds are tagged with their language. Reports about the same incident from different outlets are **grouped into one incident with a timeline** (shared named entity, ≥50 % title overlap, or a rare shared name plus ≥20 % overlap, within 7 days; one outlet's own items only merge when identical). Countries come from country names, demonyms, local names (日本, 한국) and well-known organisations (e.g. GMO / Onamae → JP). A **News coverage by country** panel shows sources live/total, items in 7 days and incidents per country. Feeds that could not be used are listed with the reason.
 - **Bottom ticker:** a scrolling marquee of the highest-severity items.
 - **Filters and search:** time window (1h/6h/24h/7d/30d), region, minimum severity, and event type. Click a type to toggle it, or double-click to show only that type. Free-text search covers CVE, vendor, group, IP and country. Press `/` to focus the search box.
 - **New critical items:** when one arrives after the first load, the screen flashes red and a toast appears. An optional 3-tone audio alert plays too, but it is **off by default**; use the speaker button to turn it on.
@@ -128,7 +128,9 @@ API endpoints:
 | Task | Every |
 |---|---|
 | `c2` (Feodo), `dshield` (Infocon/summary/top IPs + geo, ≤30 lookups/run with a persisted cache) | 15 min |
-| `kev` (also feeds crypto-vulns + KEV history), `nvd`, `euvd`, `news:<source>` ×10, `rw:<current year>` | 30 min |
+| `kev` (also feeds crypto-vulns + KEV history), `nvd`, `euvd`, `news:<source>` ×11 (core), `rw:<current year>` | 30 min |
+| `newsb:<N>` ×12 (5 regional feeds each, one batch per minute when due) | 60 min |
+| `news:assemble` (merges every news source into the `news` feed) | 10 min |
 | `crypto:<source>` ×12, `crypto:hacks` (DeFiLlama), `threatfox` | 1 h |
 | `hist:nvd` (only when the backfill changed) | 20 min |
 | `nvd:backfill` | every 90 s while windows remain, otherwise 30 min |
@@ -227,7 +229,7 @@ npx wrangler pages dev dist --persist-to /tmp/sent-local --binding SITE_PASSCODE
 | Attack sensors | SANS ISC / DShield: infocon, top sources, top ports, daily summary, and the AS country per IP | 5 min |
 | Crypto hacks & intel | DeFiLlama hacks + 12 crypto-security RSS feeds (see the crypto section) | 10 min |
 | Crypto vulnerabilities | CISA KEV + NVD keyword search (crypto terms, 120 days) | 60 min |
-| News & advisories | BleepingComputer, The Record, The Hacker News, SecurityWeek, Krebs on Security, Dark Reading, SANS ISC Diary, CISA Advisories, UK NCSC, ACSC (cyber.gov.au) | 3 min |
+| News & advisories | Core: BleepingComputer, The Record, The Hacker News, SecurityWeek, Krebs on Security, Dark Reading, SANS ISC Diary, CISA Advisories, UK NCSC, ACSC (cyber.gov.au). Regional: 58 CERT and news feeds, listed in `REGIONAL_SOURCES` in `shared/feeds.ts`; unusable feeds and the reasons are in `NEWS_DROPPED` | core 30 min, regional 60 min |
 
 Requests use an honest User-Agent (`CyberSituationMonitor/1.0`) and are cached server-side to stay polite. The app does not scrape behind bot protection.
 

@@ -20,6 +20,7 @@ import RansomwarePanel from './components/RansomwarePanel';
 import VulnPanel from './components/VulnPanel';
 import InfraPanel from './components/InfraPanel';
 import NewsPanel from './components/NewsPanel';
+import CoveragePanel from './components/CoveragePanel';
 import { DetailDrawer, CountryDrawer, FeedHealth } from './components/Drawers';
 import { Panel, STATUS_COLOR } from './components/ui';
 import { ExplainControls, ExecSummary, at } from './components/explain';
@@ -216,6 +217,8 @@ export default function App() {
         <div className="h-[400px]"><InfraPanel means={lm.infra} feeds={feeds} events={events} onPick={setSel} onCountry={setCountry} /></div>
         <div className="h-[400px]"><NewsPanel means={lm.news} feed={feeds.news} events={events} onPick={setSel} now={now} /></div>
       </div>
+
+      <div className="h-[420px]"><CoveragePanel means={lm.geoCoverage} feed={feeds.news} events={events} now={now} onCountry={setCountry} /></div>
 
       <Marquee events={events} onPick={setSel} />
       </>}

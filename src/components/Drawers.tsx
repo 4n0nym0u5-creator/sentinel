@@ -54,7 +54,22 @@ export function DetailDrawer({ e, onClose, onCountry }: { e: Ev; onClose: () => 
           {e.type === 'attack' && (<><Row k="IP" v={<span className="mono">{v.ip}</span>} /><Row k="Rank" v={`#${v.rank} in DShield top sources`} /><Row k="Targets hit" v={fmt(v.attacks)} /><Row k="Reports" v={fmt(v.reports)} /><Row k="Network" v={`AS${v.asn ?? '?'} ${v.asname || ''}`} /><Row k="First / last seen" v={`${v.firstSeen} → ${v.lastSeen}`} />
             <p className="mt-2 text-[10.5px] text-slate-500">Location is the AS registration country from SANS ISC — not attribution of the actor.</p></>)}
           {e.type === 'ioc' && (<><Row k="IOC" v={<span className="mono break-all">{v.ioc}</span>} /><Row k="Type" v={v.type} /><Row k="Threat" v={v.threat} /><Row k="Malware" v={v.malware} /><Row k="Confidence" v={`${v.confidence}%`} /><Row k="Tags" v={v.tags?.join(', ')} /></>)}
-          {e.type === 'news' && (<><Row k="Published" v={dt(v.published)} /><Row k="Tags" v={v.tags?.join(', ')} /><Row k="Countries mentioned" v={v.countries?.length ? v.countries.map(cname).join(', ') : null} /></>)}
+          {e.type === 'news' && (<><Row k="Published" v={<>{dt(v.published)}{v.firstSeen && <span className="ml-1 text-slate-500">(feed has no date — time first seen by the collector)</span>}</>} />{v.incident && <Row k="Incident" v={v.incident} />}<Row k="Tags" v={v.tags?.join(', ')} />
+            <Row k="Countries" v={v.countries?.length ? <>{v.countries.map(cname).join(', ')}{v.ccFromSource && <span className="ml-1 text-slate-500">(from the outlet's home country — not named in the text)</span>}</> : null} />
+            {v.lang && <Row k="Language" v={<span className="uppercase">{v.lang}</span>} />}
+            {v.related && (<div className="mt-3">
+              <div className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Incident timeline · {v.related.length} reports from {v.sources.length} sources (grouped automatically)</div>
+              <ol className="relative ml-1 border-l border-violet-500/40">
+                {v.related.map((r: any, i: number) => (
+                  <li key={i} className="mb-2 ml-3">
+                    <span className="absolute -left-[4.5px] mt-1.5 h-2 w-2 rounded-full bg-violet-400" />
+                    <div className="text-[10px] text-slate-500"><span className="mono">{dt(new Date(r.time).toISOString())}</span>{r.firstSeen && ' (first seen)'} · <span className="font-semibold text-violet-300">{r.source}</span></div>
+                    <a href={r.link} target="_blank" rel="noreferrer" className="text-[12px] leading-snug text-slate-200 hover:text-cyan-glow hover:underline">{r.title}</a>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-[10px] text-slate-500">Grouping rule: same curated incident name, ≥ 50 % shared title words, or a shared rare name plus ≥ 20 % shared words, within 7 days.</p>
+            </div>)}</>)}
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
           {e.link && <a className="btn btn-on" href={e.link} target="_blank" rel="noreferrer"><ExternalLink size={13} /> Open source</a>}

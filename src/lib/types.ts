@@ -1,6 +1,6 @@
 export type Sev = 'critical' | 'high' | 'medium' | 'low';
 export type EType = 'ransomware' | 'vuln' | 'c2' | 'attack' | 'news' | 'ioc';
-export interface FeedSource { name: string; url: string; ok: boolean; error?: string; count?: number }
+export interface FeedSource { name: string; url: string; ok: boolean; error?: string; count?: number; cc?: string | null; region?: string; kind?: string; lang?: string; filtered?: boolean }
 export interface FeedResult<T = any> { feed: string; ok: boolean; fetchedAt: string; ttl: number; sources: FeedSource[]; error?: string; data?: T }
 export interface FeedState<T = any> {
   id: string; label: string; poll: number;
