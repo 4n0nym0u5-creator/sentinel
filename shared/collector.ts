@@ -4,7 +4,7 @@
  * Workers free plan. Results are written to D1 as ready-to-serve JSON; Pages Functions only read them.
  * Real data only: a failing source is stored as failed and shown OFFLINE by the UI.
  */
-import { FEEDS, NEWS_SOURCES, KEV_URL, kev, nvd, euvd, feodo, threatfox, dshield, getJSON, geoCache, setGeoBudget, rssSource, assembleNews, type Env, type FeedResult, type SrcResult } from './feeds';
+import { FEEDS, NEWS_SOURCES, KEV_URL, kev, nvd, euvd, feodo, threatfox, dshield, getJSON, geoCache, setGeoBudget, rssSource, retainNews, assembleNews, type Env, type FeedResult, type SrcResult } from './feeds';
 import { CRYPTO_RSS, CRYPTO_NVD_TERMS, hackResult, assembleCrypto, cryptoVulnsKev, cryptoVulnsNvd, assembleCryptoVulns } from './crypto';
 import { kevHistory, dshieldHistory, nvdHistory, nvdStep, snapshotHistory, recordSnapshot, resetHistoryCaches, ransomwareYear, assembleRansomwareHistory, ransomwareLiveFrom, RW_FIRST_YEAR, HISTORY, type RwChunk, type HistoryPayload } from './history';
 import type { RawStore, D1Like } from './d1Store';
@@ -75,7 +75,8 @@ async function assembleRansomware(c: Ctx) {
 function tasks(): Task[] {
   const T: Task[] = [];
   NEWS_SOURCES.forEach((s) => T.push({ id: `news:${s.name}`, every: 30 * MIN, light: true, run: async (c) => {
-    await c.store.put(`src:news:${s.name}`, await rssSource(s));
+    const prev = await c.store.get(`src:news:${s.name}`).catch(() => null);
+    await c.store.put(`src:news:${s.name}`, retainNews(prev as any, await rssSource(s)));
     await snapshot(c, 'news', await assembleNewsFeed(c));
   } }));
   CRYPTO_RSS.forEach((s) => T.push({ id: `crypto:${s.name}`, every: HOUR, light: true, run: async (c) => {

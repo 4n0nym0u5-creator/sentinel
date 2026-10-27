@@ -348,6 +348,7 @@ export const NEWS_SOURCES: { name: string; url: string; prefix?: number }[] = [
   { name: 'SecurityWeek', url: 'https://www.securityweek.com/feed/' },
   { name: 'Krebs on Security', url: 'https://krebsonsecurity.com/feed/' },
   { name: 'Dark Reading', url: 'https://www.darkreading.com/rss.xml' },
+  { name: 'The Register · Security', url: 'https://www.theregister.com/security/headlines.atom' },
   { name: 'SANS ISC Diary', url: 'https://isc.sans.edu/rssfeed_full.xml' },
   { name: 'CISA Advisories', url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', prefix: 600_000 },
   { name: 'UK NCSC', url: 'https://www.ncsc.gov.uk/api/1/services/v1/report-rss-feed.xml' },
@@ -385,6 +386,21 @@ export type SrcResult = { name: string; url: string; ok: boolean; items?: any[];
 export async function rssSource(src: { name: string; url: string; prefix?: number }): Promise<SrcResult> {
   try { const items = await rssItems(src); return { name: src.name, url: src.url, ok: true, items, fetchedAt: new Date().toISOString() }; }
   catch (e: any) { return { name: src.name, url: src.url, ok: false, error: String(e?.message || e), fetchedAt: new Date().toISOString() }; }
+}
+/** Keep recent items that have scrolled off a source's (often short: 5–15 item) RSS window, so a story stays
+ *  visible for NEWS_RETAIN_DAYS instead of vanishing hours after publication. Only items the source itself published
+ *  are kept; a failed fetch still reports the source as offline (the kept items wait for its next good fetch). */
+export const NEWS_RETAIN_DAYS = 14;
+export function retainNews(prev: (SrcResult & { kept?: any[] }) | null | undefined, cur: SrcResult, max = 120): SrcResult & { kept?: any[] } {
+  const old = (prev?.items ?? prev?.kept ?? []) as any[];
+  const cutoff = Date.now() - NEWS_RETAIN_DAYS * 86400_000;
+  const fresh = (x: any) => { const t = Date.parse(x?.published); return !isNaN(t) && t >= cutoff; };
+  if (!cur.ok) return { ...cur, kept: old.filter(fresh).slice(0, max) };
+  const items = [...(cur.items ?? [])];
+  const seen = new Set(items.map((x) => x.link || x.id));
+  for (const x of old) { const k = x.link || x.id; if (!seen.has(k) && fresh(x)) { seen.add(k); items.push(x); } }
+  items.sort((a, b) => String(b.published).localeCompare(String(a.published)));
+  return { ...cur, items: items.slice(0, max) };
 }
 /** Merge per-source RSS results into the news feed payload. */
 export function assembleNews(results: SrcResult[]): Partial<FeedResult> {

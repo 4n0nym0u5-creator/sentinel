@@ -132,7 +132,7 @@ export function assembleCrypto(hk: HackResult, rss: SrcResult[], g: FeedResult |
     if (!g || !g.ok) throw new Error(g?.error || 'news feed offline');
     const kept = (g.data as any).items.filter((it: any) => CRYPTO.test(`${it.title} ${it.summary}`) && !NOT_CRYPTO.test(it.title));
     news.push(...kept.map((it: any) => ({ ...it, specialist: false, viaSecurityNews: true })));
-    sources.push({ name: 'Security news (crypto-filtered, 10 RSS)', url: '/api/feed/news', ok: true, count: kept.length });
+    sources.push({ name: 'Security news (crypto-filtered, 11 RSS)', url: '/api/feed/news', ok: true, count: kept.length });
   } catch (e: any) { sources.push({ name: 'Security news (crypto-filtered)', url: '/api/feed/news', ok: false, error: String(e?.message || e) }); }
   if (!hackItems.length && !news.length) throw new Error('All crypto sources failed');
   const seen = new Set<string>();

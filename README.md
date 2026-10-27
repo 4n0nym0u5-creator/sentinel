@@ -14,7 +14,7 @@ Stack: Vite + React 18 + TypeScript + Tailwind. The map uses d3-geo (Natural Ear
 - **Ransomware panel:** a 30-day trend plus breakdowns by group, sector and country, and the latest claims.
 - **Vulnerabilities panel:** the CISA KEV catalogue (due dates and known ransomware use), NVD CVSS ≥ 9 CVEs, and ENISA EUVD exploited/critical entries. Each shows CVSS badges and EPSS exploit-probability bars.
 - **Attack infrastructure panel:** DShield top targeted ports and top attacking sources (by AS country), Feodo botnet C2 servers, and the 14-day sensor trend.
-- **News and advisories:** 10 RSS sources, auto-tagged (ransomware, zero-day, breach, KEV, nation-state and so on), with the countries mentioned.
+- **News and advisories:** 11 RSS sources (each kept for 14 days after it scrolls off the source feed), auto-tagged (ransomware, zero-day, breach, KEV, nation-state and so on), with the countries mentioned.
 - **Bottom ticker:** a scrolling marquee of the highest-severity items.
 - **Filters and search:** time window (1h/6h/24h/7d/30d), region, minimum severity, and event type. Click a type to toggle it, or double-click to show only that type. Free-text search covers CVE, vendor, group, IP and country. Press `/` to focus the search box.
 - **New critical items:** when one arrives after the first load, the screen flashes red and a toast appears. An optional 3-tone audio alert plays too, but it is **off by default**; use the speaker button to turn it on.
